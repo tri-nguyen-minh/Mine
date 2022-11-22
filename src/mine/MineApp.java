@@ -1,12 +1,7 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
 package mine;
 
 import java.awt.Color;
-import java.awt.event.MouseListener;
+import static java.lang.Thread.sleep;
 import java.util.ArrayList;
 import java.util.HashMap;
 import javax.swing.JButton;
@@ -14,12 +9,13 @@ import javax.swing.JOptionPane;
 
 /**
  *
- * @author Nat
+ * @author TMN
  */
 public class MineApp extends javax.swing.JFrame {
 
     int value = 0;
     boolean mineGenerated = false;
+    boolean onGame = true;
     HashMap<Integer, ArrayList<Integer>> adjacentMap;
     HashMap<Integer, JButton> buttonMap;
     ArrayList<Integer> adjacentList;
@@ -27,28 +23,65 @@ public class MineApp extends javax.swing.JFrame {
     ArrayList<Integer> ChangeList;
     HashMap<Integer, Boolean> buttonStatusList;
     JButton defaultButton;
-    MouseListener listener = null;
+    Thread timer;
+    float[] colorScheme;
 
     public MineApp() {
         initComponents();
         getAdjacentBtn();
         mapButton();
         defaultButton = new JButton();
+        txtTimer.setEditable(false);
+        colorScheme = Color.RGBtoHSB(103, 153, 255, null);
+    }
+
+    private void reset() {
+        for (int i = 1; i <= buttonMap.size(); i++) {
+            defaultButton = buttonMap.get(i);
+            defaultButton.setEnabled(true);
+            defaultButton.setText("");
+            buttonStatusList.replace(i, false);
+            defaultButton.setBackground(Color.getHSBColor(colorScheme[0], colorScheme[1], colorScheme[2]));
+        }
+        txtTimer.setText("000");
+        mineGenerated = false;
+        onGame = true;
+        mineList.clear();
+
+    }
+
+    private void manageFlag(int slot) {
+        defaultButton = buttonMap.get(slot);
+        if (defaultButton.isEnabled()) {
+            String text = defaultButton.getText();
+            if (text.equals("")) {
+                buttonStatusList.replace(slot, true);
+                defaultButton.setForeground(Color.white);
+                defaultButton.setText("?");
+            } else if (text.equals("?")) {
+                buttonStatusList.replace(slot, true);
+                defaultButton.setForeground(Color.red);
+                defaultButton.setText("B");
+            } else {
+                buttonStatusList.replace(slot, false);
+                defaultButton.setText("");
+            }
+        }
     }
 
     private void mineHit() {
         for (int i = 0; i < mineList.size(); i++) {
             defaultButton = buttonMap.get(mineList.get(i));
             defaultButton.setBackground(Color.DARK_GRAY);
+            timer.stop();
         }
-        if (JOptionPane.showConfirmDialog(this, "Game Over!\n\nContinue?",
+        if (JOptionPane.showConfirmDialog(this, "Game Over!\nYour Time: "
+                + "" + Integer.parseInt(txtTimer.getText()) + "s\n\nContinue?",
                 "Game Over!", JOptionPane.OK_OPTION) == 0) {
-            MineApp newApp = new MineApp();
-            newApp.setVisible(true);
-            newApp.setLocation(this.getLocation());
-            newApp.setSize(650, 550);
+            reset();
+        } else {
+            this.dispose();
         }
-        this.dispose();
     }
 
     private void manageSlot(int slot) {
@@ -70,69 +103,73 @@ public class MineApp extends javax.swing.JFrame {
             manageAdjacentButton(slot);
         }
         if (countClearSlot() == 300) {
-            if (JOptionPane.showConfirmDialog(this, "Victory!\n\nContinue?",
+            timer.stop();
+            if (JOptionPane.showConfirmDialog(this, "Victory!\nYour Time: "
+                    + "" + Integer.parseInt(txtTimer.getText()) + "s\n\nContinue?",
                     "Victory!", JOptionPane.OK_OPTION) == 0) {
-                MineApp newApp = new MineApp();
-                newApp.setVisible(true);
-                newApp.setSize(650, 550);
+                reset();
+            } else {
+                this.dispose();
             }
-            this.dispose();
         }
     }
 
     private void manageAdjacentButton(int slot) {
-        defaultButton = buttonMap.get(slot);
-        int adjacentMines = countAdjacentMines(slot);
-        defaultButton.setText("" + adjacentMines);
-        switch (adjacentMines) {
-            case 1: {
-                defaultButton.setForeground(Color.MAGENTA);
-                break;
+        if (!buttonStatusList.get(slot)) {
+            defaultButton = buttonMap.get(slot);
+            int adjacentMines = countAdjacentMines(slot);
+            defaultButton.setText("" + adjacentMines);
+            switch (adjacentMines) {
+                case 1: {
+                    defaultButton.setForeground(Color.MAGENTA);
+                    break;
+                }
+                case 2: {
+                    defaultButton.setForeground(Color.GREEN);
+                    break;
+                }
+                case 3: {
+                    defaultButton.setForeground(Color.RED);
+                    break;
+                }
+                case 4: {
+                    defaultButton.setForeground(Color.BLUE);
+                    break;
+                }
+                case 5: {
+                    defaultButton.setForeground(Color.ORANGE);
+                    break;
+                }
+                case 6: {
+                    defaultButton.setForeground(Color.PINK);
+                    break;
+                }
+                case 7: {
+                    defaultButton.setForeground(Color.YELLOW);
+                    break;
+                }
+                case 8: {
+                    defaultButton.setForeground(Color.BLACK);
+                    break;
+                }
             }
-            case 2: {
-                defaultButton.setForeground(Color.GREEN);
-                break;
-            }
-            case 3: {
-                defaultButton.setForeground(Color.RED);
-                break;
-            }
-            case 4: {
-                defaultButton.setForeground(Color.BLUE);
-                break;
-            }
-            case 5: {
-                defaultButton.setForeground(Color.ORANGE);
-                break;
-            }
-            case 6: {
-                defaultButton.setForeground(Color.PINK);
-                break;
-            }
-            case 7: {
-                defaultButton.setForeground(Color.YELLOW);
-                break;
-            }
-            case 8: {
-                defaultButton.setForeground(Color.BLACK);
-                break;
-            }
+            disableButton(slot);
         }
-        disableButton(slot);
-
     }
 
     private void manageNonAdjacentButton(int slot) {
-        disableButton(slot);
-        ChangeList.add(slot);
-        int sizeCount = adjacentMap.get(slot).size();
-        for (int i = 0; i < sizeCount; i++) {
-            adjacentList = adjacentMap.get(slot);
-            int newSlot = (int) adjacentList.get(i);
-            int count = countAdjacentMines(newSlot);
-            if (count == 0) {
-                if (!buttonStatusList.get(newSlot)) {
-                    manageNonAdjacentButton(newSlot);
+        if (!buttonStatusList.get(slot)) {
+            disableButton(slot);
+            ChangeList.add(slot);
+            int sizeCount = adjacentMap.get(slot).size();
+            for (int i = 0; i < sizeCount; i++) {
+                adjacentList = adjacentMap.get(slot);
+                int newSlot = (int) adjacentList.get(i);
+                int count = countAdjacentMines(newSlot);
+                if (count == 0) {
+                    if (!buttonStatusList.get(newSlot)) {
+                        manageNonAdjacentButton(newSlot);
+                    }
                 }
             }
         }
@@ -165,9 +202,27 @@ public class MineApp extends javax.swing.JFrame {
             }
         }
         mineGenerated = true;
-//        for (int i = 0; i < mineList.size(); i++) {
-//            buttonStatusList.replace(mineList.get(i), true);
-//        }
+        timer = new Thread() {
+            @Override
+            public void run() {
+                int timer = 0;
+                String out = "";
+                while (true) {
+                    try {
+                        sleep(1000);
+                        timer++;
+                        if (timer < 10) {
+                            out = "00" + timer;
+                        } else if (timer < 100) {
+                            out = "0" + timer;
+                        }
+                        txtTimer.setText(out);
+                    } catch (InterruptedException e) {
+                    }
+                }
+            }
+        };
+        timer.start();
     }
 
     private int countAdjacentMines(int slot) {
@@ -248,14 +303,9 @@ public class MineApp extends javax.swing.JFrame {
             }
             adjacentMap.put(i, adjacentList);
         }
-
     }
 
     private void mapButton() {
-        buttonStatusList = new HashMap<>();
-        for (int i = 1; i <= 300; i++) {
-            buttonStatusList.put(i, false);
-        }
         buttonMap = new HashMap<>();
         buttonMap.put(1, btn1);
         buttonMap.put(2, btn2);
@@ -557,6 +607,10 @@ public class MineApp extends javax.swing.JFrame {
         buttonMap.put(298, btn298);
         buttonMap.put(299, btn299);
         buttonMap.put(300, btn300);
+        buttonStatusList = new HashMap<>();
+        for (int i = 1; i <= 300; i++) {
+            buttonStatusList.put(i, false);
+        }
     }
 
     /**
@@ -569,6 +623,7 @@ public class MineApp extends javax.swing.JFrame {
     private void initComponents() {
 
         jPanel1 = new javax.swing.JPanel();
+        txtTimer = new javax.swing.JTextField();
         jPanel2 = new javax.swing.JPanel();
         jPanel3 = new javax.swing.JPanel();
         jPanel4 = new javax.swing.JPanel();
@@ -878,16 +933,13 @@ public class MineApp extends javax.swing.JFrame {
 
         jPanel1.setPreferredSize(new java.awt.Dimension(730, 50));
 
-        javax.swing.GroupLayout jPanel1Layout = new javax.swing.GroupLayout(jPanel1);
-        jPanel1.setLayout(jPanel1Layout);
-        jPanel1Layout.setHorizontalGroup(
-            jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGap(0, 876, Short.MAX_VALUE)
-        );
-        jPanel1Layout.setVerticalGroup(
-            jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGap(0, 50, Short.MAX_VALUE)
-        );
+        txtTimer.setBackground(new java.awt.Color(102, 102, 102));
+        txtTimer.setFont(new java.awt.Font("Trebuchet MS", 1, 30)); // NOI18N
+        txtTimer.setForeground(new java.awt.Color(255, 255, 255));
+        txtTimer.setHorizontalAlignment(javax.swing.JTextField.CENTER);
+        txtTimer.setText("000");
+        txtTimer.setPreferredSize(new java.awt.Dimension(70, 40));
+        jPanel1.add(txtTimer);
 
         getContentPane().add(jPanel1, java.awt.BorderLayout.PAGE_END);
 
@@ -950,11 +1002,6 @@ public class MineApp extends javax.swing.JFrame {
                 btn1MouseClicked(evt);
             }
         });
-        btn1.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn1ActionPerformed(evt);
-            }
-        });
         jPanel5.add(btn1);
 
         btn2.setBackground(new java.awt.Color(102, 153, 255));
@@ -965,11 +1012,6 @@ public class MineApp extends javax.swing.JFrame {
         btn2.addMouseListener(new java.awt.event.MouseAdapter() {
             public void mouseClicked(java.awt.event.MouseEvent evt) {
                 btn2MouseClicked(evt);
-            }
-        });
-        btn2.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn2ActionPerformed(evt);
             }
         });
         jPanel5.add(btn2);
@@ -984,11 +1026,6 @@ public class MineApp extends javax.swing.JFrame {
                 btn3MouseClicked(evt);
             }
         });
-        btn3.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn3ActionPerformed(evt);
-            }
-        });
         jPanel5.add(btn3);
 
         btn4.setBackground(new java.awt.Color(102, 153, 255));
@@ -999,11 +1036,6 @@ public class MineApp extends javax.swing.JFrame {
         btn4.addMouseListener(new java.awt.event.MouseAdapter() {
             public void mouseClicked(java.awt.event.MouseEvent evt) {
                 btn4MouseClicked(evt);
-            }
-        });
-        btn4.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn4ActionPerformed(evt);
             }
         });
         jPanel5.add(btn4);
@@ -1018,11 +1050,6 @@ public class MineApp extends javax.swing.JFrame {
                 btn5MouseClicked(evt);
             }
         });
-        btn5.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn5ActionPerformed(evt);
-            }
-        });
         jPanel5.add(btn5);
 
         btn6.setBackground(new java.awt.Color(102, 153, 255));
@@ -1033,11 +1060,6 @@ public class MineApp extends javax.swing.JFrame {
         btn6.addMouseListener(new java.awt.event.MouseAdapter() {
             public void mouseClicked(java.awt.event.MouseEvent evt) {
                 btn6MouseClicked(evt);
-            }
-        });
-        btn6.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn6ActionPerformed(evt);
             }
         });
         jPanel5.add(btn6);
@@ -1052,11 +1074,6 @@ public class MineApp extends javax.swing.JFrame {
                 btn7MouseClicked(evt);
             }
         });
-        btn7.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn7ActionPerformed(evt);
-            }
-        });
         jPanel5.add(btn7);
 
         btn8.setBackground(new java.awt.Color(102, 153, 255));
@@ -1067,11 +1084,6 @@ public class MineApp extends javax.swing.JFrame {
         btn8.addMouseListener(new java.awt.event.MouseAdapter() {
             public void mouseClicked(java.awt.event.MouseEvent evt) {
                 btn8MouseClicked(evt);
-            }
-        });
-        btn8.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn8ActionPerformed(evt);
             }
         });
         jPanel5.add(btn8);
@@ -1086,11 +1098,6 @@ public class MineApp extends javax.swing.JFrame {
                 btn9MouseClicked(evt);
             }
         });
-        btn9.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn9ActionPerformed(evt);
-            }
-        });
         jPanel5.add(btn9);
 
         btn10.setBackground(new java.awt.Color(102, 153, 255));
@@ -1101,11 +1108,6 @@ public class MineApp extends javax.swing.JFrame {
         btn10.addMouseListener(new java.awt.event.MouseAdapter() {
             public void mouseClicked(java.awt.event.MouseEvent evt) {
                 btn10MouseClicked(evt);
-            }
-        });
-        btn10.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn10ActionPerformed(evt);
             }
         });
         jPanel5.add(btn10);
@@ -1120,11 +1122,6 @@ public class MineApp extends javax.swing.JFrame {
                 btn11MouseClicked(evt);
             }
         });
-        btn11.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn11ActionPerformed(evt);
-            }
-        });
         jPanel5.add(btn11);
 
         btn12.setBackground(new java.awt.Color(102, 153, 255));
@@ -1135,11 +1132,6 @@ public class MineApp extends javax.swing.JFrame {
         btn12.addMouseListener(new java.awt.event.MouseAdapter() {
             public void mouseClicked(java.awt.event.MouseEvent evt) {
                 btn12MouseClicked(evt);
-            }
-        });
-        btn12.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn12ActionPerformed(evt);
             }
         });
         jPanel5.add(btn12);
@@ -1154,11 +1146,6 @@ public class MineApp extends javax.swing.JFrame {
                 btn13MouseClicked(evt);
             }
         });
-        btn13.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn13ActionPerformed(evt);
-            }
-        });
         jPanel5.add(btn13);
 
         btn14.setBackground(new java.awt.Color(102, 153, 255));
@@ -1169,11 +1156,6 @@ public class MineApp extends javax.swing.JFrame {
         btn14.addMouseListener(new java.awt.event.MouseAdapter() {
             public void mouseClicked(java.awt.event.MouseEvent evt) {
                 btn14MouseClicked(evt);
-            }
-        });
-        btn14.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn14ActionPerformed(evt);
             }
         });
         jPanel5.add(btn14);
@@ -1188,11 +1170,6 @@ public class MineApp extends javax.swing.JFrame {
                 btn15MouseClicked(evt);
             }
         });
-        btn15.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn15ActionPerformed(evt);
-            }
-        });
         jPanel5.add(btn15);
 
         btn16.setBackground(new java.awt.Color(102, 153, 255));
@@ -1203,11 +1180,6 @@ public class MineApp extends javax.swing.JFrame {
         btn16.addMouseListener(new java.awt.event.MouseAdapter() {
             public void mouseClicked(java.awt.event.MouseEvent evt) {
                 btn16MouseClicked(evt);
-            }
-        });
-        btn16.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn16ActionPerformed(evt);
             }
         });
         jPanel5.add(btn16);
@@ -1222,11 +1194,6 @@ public class MineApp extends javax.swing.JFrame {
                 btn17MouseClicked(evt);
             }
         });
-        btn17.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn17ActionPerformed(evt);
-            }
-        });
         jPanel5.add(btn17);
 
         btn18.setBackground(new java.awt.Color(102, 153, 255));
@@ -1237,11 +1204,6 @@ public class MineApp extends javax.swing.JFrame {
         btn18.addMouseListener(new java.awt.event.MouseAdapter() {
             public void mouseClicked(java.awt.event.MouseEvent evt) {
                 btn18MouseClicked(evt);
-            }
-        });
-        btn18.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn18ActionPerformed(evt);
             }
         });
         jPanel5.add(btn18);
@@ -1256,11 +1218,6 @@ public class MineApp extends javax.swing.JFrame {
                 btn19MouseClicked(evt);
             }
         });
-        btn19.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn19ActionPerformed(evt);
-            }
-        });
         jPanel5.add(btn19);
 
         btn20.setBackground(new java.awt.Color(102, 153, 255));
@@ -1271,11 +1228,6 @@ public class MineApp extends javax.swing.JFrame {
         btn20.addMouseListener(new java.awt.event.MouseAdapter() {
             public void mouseClicked(java.awt.event.MouseEvent evt) {
                 btn20MouseClicked(evt);
-            }
-        });
-        btn20.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn20ActionPerformed(evt);
             }
         });
         jPanel5.add(btn20);
@@ -1290,11 +1242,6 @@ public class MineApp extends javax.swing.JFrame {
                 btn21MouseClicked(evt);
             }
         });
-        btn21.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn21ActionPerformed(evt);
-            }
-        });
         jPanel5.add(btn21);
 
         btn22.setBackground(new java.awt.Color(102, 153, 255));
@@ -1305,11 +1252,6 @@ public class MineApp extends javax.swing.JFrame {
         btn22.addMouseListener(new java.awt.event.MouseAdapter() {
             public void mouseClicked(java.awt.event.MouseEvent evt) {
                 btn22MouseClicked(evt);
-            }
-        });
-        btn22.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn22ActionPerformed(evt);
             }
         });
         jPanel5.add(btn22);
@@ -1324,11 +1266,6 @@ public class MineApp extends javax.swing.JFrame {
                 btn23MouseClicked(evt);
             }
         });
-        btn23.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn23ActionPerformed(evt);
-            }
-        });
         jPanel5.add(btn23);
 
         btn24.setBackground(new java.awt.Color(102, 153, 255));
@@ -1339,11 +1276,6 @@ public class MineApp extends javax.swing.JFrame {
         btn24.addMouseListener(new java.awt.event.MouseAdapter() {
             public void mouseClicked(java.awt.event.MouseEvent evt) {
                 btn24MouseClicked(evt);
-            }
-        });
-        btn24.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn24ActionPerformed(evt);
             }
         });
         jPanel5.add(btn24);
@@ -1358,11 +1290,6 @@ public class MineApp extends javax.swing.JFrame {
                 btn25MouseClicked(evt);
             }
         });
-        btn25.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn25ActionPerformed(evt);
-            }
-        });
         jPanel5.add(btn25);
 
         btn26.setBackground(new java.awt.Color(102, 153, 255));
@@ -1373,11 +1300,6 @@ public class MineApp extends javax.swing.JFrame {
         btn26.addMouseListener(new java.awt.event.MouseAdapter() {
             public void mouseClicked(java.awt.event.MouseEvent evt) {
                 btn26MouseClicked(evt);
-            }
-        });
-        btn26.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn26ActionPerformed(evt);
             }
         });
         jPanel5.add(btn26);
@@ -1392,11 +1314,6 @@ public class MineApp extends javax.swing.JFrame {
                 btn27MouseClicked(evt);
             }
         });
-        btn27.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn27ActionPerformed(evt);
-            }
-        });
         jPanel5.add(btn27);
 
         btn28.setBackground(new java.awt.Color(102, 153, 255));
@@ -1407,11 +1324,6 @@ public class MineApp extends javax.swing.JFrame {
         btn28.addMouseListener(new java.awt.event.MouseAdapter() {
             public void mouseClicked(java.awt.event.MouseEvent evt) {
                 btn28MouseClicked(evt);
-            }
-        });
-        btn28.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn28ActionPerformed(evt);
             }
         });
         jPanel5.add(btn28);
@@ -1426,11 +1338,6 @@ public class MineApp extends javax.swing.JFrame {
                 btn29MouseClicked(evt);
             }
         });
-        btn29.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn29ActionPerformed(evt);
-            }
-        });
         jPanel5.add(btn29);
 
         btn30.setBackground(new java.awt.Color(102, 153, 255));
@@ -1441,11 +1348,6 @@ public class MineApp extends javax.swing.JFrame {
         btn30.addMouseListener(new java.awt.event.MouseAdapter() {
             public void mouseClicked(java.awt.event.MouseEvent evt) {
                 btn30MouseClicked(evt);
-            }
-        });
-        btn30.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn30ActionPerformed(evt);
             }
         });
         jPanel5.add(btn30);
@@ -1460,11 +1362,6 @@ public class MineApp extends javax.swing.JFrame {
                 btn31MouseClicked(evt);
             }
         });
-        btn31.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn31ActionPerformed(evt);
-            }
-        });
         jPanel5.add(btn31);
 
         btn32.setBackground(new java.awt.Color(102, 153, 255));
@@ -1475,11 +1372,6 @@ public class MineApp extends javax.swing.JFrame {
         btn32.addMouseListener(new java.awt.event.MouseAdapter() {
             public void mouseClicked(java.awt.event.MouseEvent evt) {
                 btn32MouseClicked(evt);
-            }
-        });
-        btn32.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn32ActionPerformed(evt);
             }
         });
         jPanel5.add(btn32);
@@ -1494,11 +1386,6 @@ public class MineApp extends javax.swing.JFrame {
                 btn33MouseClicked(evt);
             }
         });
-        btn33.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn33ActionPerformed(evt);
-            }
-        });
         jPanel5.add(btn33);
 
         btn34.setBackground(new java.awt.Color(102, 153, 255));
@@ -1509,11 +1396,6 @@ public class MineApp extends javax.swing.JFrame {
         btn34.addMouseListener(new java.awt.event.MouseAdapter() {
             public void mouseClicked(java.awt.event.MouseEvent evt) {
                 btn34MouseClicked(evt);
-            }
-        });
-        btn34.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn34ActionPerformed(evt);
             }
         });
         jPanel5.add(btn34);
@@ -1528,11 +1410,6 @@ public class MineApp extends javax.swing.JFrame {
                 btn35MouseClicked(evt);
             }
         });
-        btn35.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn35ActionPerformed(evt);
-            }
-        });
         jPanel5.add(btn35);
 
         btn36.setBackground(new java.awt.Color(102, 153, 255));
@@ -1543,11 +1420,6 @@ public class MineApp extends javax.swing.JFrame {
         btn36.addMouseListener(new java.awt.event.MouseAdapter() {
             public void mouseClicked(java.awt.event.MouseEvent evt) {
                 btn36MouseClicked(evt);
-            }
-        });
-        btn36.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn36ActionPerformed(evt);
             }
         });
         jPanel5.add(btn36);
@@ -1562,11 +1434,6 @@ public class MineApp extends javax.swing.JFrame {
                 btn37MouseClicked(evt);
             }
         });
-        btn37.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn37ActionPerformed(evt);
-            }
-        });
         jPanel5.add(btn37);
 
         btn38.setBackground(new java.awt.Color(102, 153, 255));
@@ -1577,11 +1444,6 @@ public class MineApp extends javax.swing.JFrame {
         btn38.addMouseListener(new java.awt.event.MouseAdapter() {
             public void mouseClicked(java.awt.event.MouseEvent evt) {
                 btn38MouseClicked(evt);
-            }
-        });
-        btn38.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn38ActionPerformed(evt);
             }
         });
         jPanel5.add(btn38);
@@ -1596,11 +1458,6 @@ public class MineApp extends javax.swing.JFrame {
                 btn39MouseClicked(evt);
             }
         });
-        btn39.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn39ActionPerformed(evt);
-            }
-        });
         jPanel5.add(btn39);
 
         btn40.setBackground(new java.awt.Color(102, 153, 255));
@@ -1611,11 +1468,6 @@ public class MineApp extends javax.swing.JFrame {
         btn40.addMouseListener(new java.awt.event.MouseAdapter() {
             public void mouseClicked(java.awt.event.MouseEvent evt) {
                 btn40MouseClicked(evt);
-            }
-        });
-        btn40.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn40ActionPerformed(evt);
             }
         });
         jPanel5.add(btn40);
@@ -1630,11 +1482,6 @@ public class MineApp extends javax.swing.JFrame {
                 btn41MouseClicked(evt);
             }
         });
-        btn41.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn41ActionPerformed(evt);
-            }
-        });
         jPanel5.add(btn41);
 
         btn42.setBackground(new java.awt.Color(102, 153, 255));
@@ -1645,11 +1492,6 @@ public class MineApp extends javax.swing.JFrame {
         btn42.addMouseListener(new java.awt.event.MouseAdapter() {
             public void mouseClicked(java.awt.event.MouseEvent evt) {
                 btn42MouseClicked(evt);
-            }
-        });
-        btn42.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn42ActionPerformed(evt);
             }
         });
         jPanel5.add(btn42);
@@ -1664,11 +1506,6 @@ public class MineApp extends javax.swing.JFrame {
                 btn43MouseClicked(evt);
             }
         });
-        btn43.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn43ActionPerformed(evt);
-            }
-        });
         jPanel5.add(btn43);
 
         btn44.setBackground(new java.awt.Color(102, 153, 255));
@@ -1679,11 +1516,6 @@ public class MineApp extends javax.swing.JFrame {
         btn44.addMouseListener(new java.awt.event.MouseAdapter() {
             public void mouseClicked(java.awt.event.MouseEvent evt) {
                 btn44MouseClicked(evt);
-            }
-        });
-        btn44.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn44ActionPerformed(evt);
             }
         });
         jPanel5.add(btn44);
@@ -1698,11 +1530,6 @@ public class MineApp extends javax.swing.JFrame {
                 btn45MouseClicked(evt);
             }
         });
-        btn45.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn45ActionPerformed(evt);
-            }
-        });
         jPanel5.add(btn45);
 
         btn46.setBackground(new java.awt.Color(102, 153, 255));
@@ -1713,11 +1540,6 @@ public class MineApp extends javax.swing.JFrame {
         btn46.addMouseListener(new java.awt.event.MouseAdapter() {
             public void mouseClicked(java.awt.event.MouseEvent evt) {
                 btn46MouseClicked(evt);
-            }
-        });
-        btn46.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn46ActionPerformed(evt);
             }
         });
         jPanel5.add(btn46);
@@ -1732,11 +1554,6 @@ public class MineApp extends javax.swing.JFrame {
                 btn47MouseClicked(evt);
             }
         });
-        btn47.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn47ActionPerformed(evt);
-            }
-        });
         jPanel5.add(btn47);
 
         btn48.setBackground(new java.awt.Color(102, 153, 255));
@@ -1747,11 +1564,6 @@ public class MineApp extends javax.swing.JFrame {
         btn48.addMouseListener(new java.awt.event.MouseAdapter() {
             public void mouseClicked(java.awt.event.MouseEvent evt) {
                 btn48MouseClicked(evt);
-            }
-        });
-        btn48.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn48ActionPerformed(evt);
             }
         });
         jPanel5.add(btn48);
@@ -1766,11 +1578,6 @@ public class MineApp extends javax.swing.JFrame {
                 btn49MouseClicked(evt);
             }
         });
-        btn49.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn49ActionPerformed(evt);
-            }
-        });
         jPanel5.add(btn49);
 
         btn50.setBackground(new java.awt.Color(102, 153, 255));
@@ -1781,11 +1588,6 @@ public class MineApp extends javax.swing.JFrame {
         btn50.addMouseListener(new java.awt.event.MouseAdapter() {
             public void mouseClicked(java.awt.event.MouseEvent evt) {
                 btn50MouseClicked(evt);
-            }
-        });
-        btn50.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn50ActionPerformed(evt);
             }
         });
         jPanel5.add(btn50);
@@ -1800,11 +1602,6 @@ public class MineApp extends javax.swing.JFrame {
                 btn51MouseClicked(evt);
             }
         });
-        btn51.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn51ActionPerformed(evt);
-            }
-        });
         jPanel5.add(btn51);
 
         btn52.setBackground(new java.awt.Color(102, 153, 255));
@@ -1815,11 +1612,6 @@ public class MineApp extends javax.swing.JFrame {
         btn52.addMouseListener(new java.awt.event.MouseAdapter() {
             public void mouseClicked(java.awt.event.MouseEvent evt) {
                 btn52MouseClicked(evt);
-            }
-        });
-        btn52.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn52ActionPerformed(evt);
             }
         });
         jPanel5.add(btn52);
@@ -1834,11 +1626,6 @@ public class MineApp extends javax.swing.JFrame {
                 btn53MouseClicked(evt);
             }
         });
-        btn53.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn53ActionPerformed(evt);
-            }
-        });
         jPanel5.add(btn53);
 
         btn54.setBackground(new java.awt.Color(102, 153, 255));
@@ -1849,11 +1636,6 @@ public class MineApp extends javax.swing.JFrame {
         btn54.addMouseListener(new java.awt.event.MouseAdapter() {
             public void mouseClicked(java.awt.event.MouseEvent evt) {
                 btn54MouseClicked(evt);
-            }
-        });
-        btn54.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn54ActionPerformed(evt);
             }
         });
         jPanel5.add(btn54);
@@ -1868,11 +1650,6 @@ public class MineApp extends javax.swing.JFrame {
                 btn55MouseClicked(evt);
             }
         });
-        btn55.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn55ActionPerformed(evt);
-            }
-        });
         jPanel5.add(btn55);
 
         btn56.setBackground(new java.awt.Color(102, 153, 255));
@@ -1883,11 +1660,6 @@ public class MineApp extends javax.swing.JFrame {
         btn56.addMouseListener(new java.awt.event.MouseAdapter() {
             public void mouseClicked(java.awt.event.MouseEvent evt) {
                 btn56MouseClicked(evt);
-            }
-        });
-        btn56.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn56ActionPerformed(evt);
             }
         });
         jPanel5.add(btn56);
@@ -1902,11 +1674,6 @@ public class MineApp extends javax.swing.JFrame {
                 btn57MouseClicked(evt);
             }
         });
-        btn57.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn57ActionPerformed(evt);
-            }
-        });
         jPanel5.add(btn57);
 
         btn58.setBackground(new java.awt.Color(102, 153, 255));
@@ -1917,11 +1684,6 @@ public class MineApp extends javax.swing.JFrame {
         btn58.addMouseListener(new java.awt.event.MouseAdapter() {
             public void mouseClicked(java.awt.event.MouseEvent evt) {
                 btn58MouseClicked(evt);
-            }
-        });
-        btn58.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn58ActionPerformed(evt);
             }
         });
         jPanel5.add(btn58);
@@ -1936,11 +1698,6 @@ public class MineApp extends javax.swing.JFrame {
                 btn59MouseClicked(evt);
             }
         });
-        btn59.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn59ActionPerformed(evt);
-            }
-        });
         jPanel5.add(btn59);
 
         btn60.setBackground(new java.awt.Color(102, 153, 255));
@@ -1951,11 +1708,6 @@ public class MineApp extends javax.swing.JFrame {
         btn60.addMouseListener(new java.awt.event.MouseAdapter() {
             public void mouseClicked(java.awt.event.MouseEvent evt) {
                 btn60MouseClicked(evt);
-            }
-        });
-        btn60.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn60ActionPerformed(evt);
             }
         });
         jPanel5.add(btn60);
@@ -1970,11 +1722,6 @@ public class MineApp extends javax.swing.JFrame {
                 btn61MouseClicked(evt);
             }
         });
-        btn61.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn61ActionPerformed(evt);
-            }
-        });
         jPanel5.add(btn61);
 
         btn62.setBackground(new java.awt.Color(102, 153, 255));
@@ -1985,11 +1732,6 @@ public class MineApp extends javax.swing.JFrame {
         btn62.addMouseListener(new java.awt.event.MouseAdapter() {
             public void mouseClicked(java.awt.event.MouseEvent evt) {
                 btn62MouseClicked(evt);
-            }
-        });
-        btn62.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn62ActionPerformed(evt);
             }
         });
         jPanel5.add(btn62);
@@ -2004,11 +1746,6 @@ public class MineApp extends javax.swing.JFrame {
                 btn63MouseClicked(evt);
             }
         });
-        btn63.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn63ActionPerformed(evt);
-            }
-        });
         jPanel5.add(btn63);
 
         btn64.setBackground(new java.awt.Color(102, 153, 255));
@@ -2021,11 +1758,6 @@ public class MineApp extends javax.swing.JFrame {
                 btn64MouseClicked(evt);
             }
         });
-        btn64.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn64ActionPerformed(evt);
-            }
-        });
         jPanel5.add(btn64);
 
         btn65.setBackground(new java.awt.Color(102, 153, 255));
@@ -2033,9 +1765,9 @@ public class MineApp extends javax.swing.JFrame {
         btn65.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn65.setMaximumSize(new java.awt.Dimension(20, 20));
         btn65.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn65.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn65ActionPerformed(evt);
+        btn65.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn65MouseClicked(evt);
             }
         });
         jPanel5.add(btn65);
@@ -2045,9 +1777,9 @@ public class MineApp extends javax.swing.JFrame {
         btn66.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn66.setMaximumSize(new java.awt.Dimension(20, 20));
         btn66.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn66.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn66ActionPerformed(evt);
+        btn66.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn66MouseClicked(evt);
             }
         });
         jPanel5.add(btn66);
@@ -2057,9 +1789,9 @@ public class MineApp extends javax.swing.JFrame {
         btn67.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn67.setMaximumSize(new java.awt.Dimension(20, 20));
         btn67.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn67.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn67ActionPerformed(evt);
+        btn67.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn67MouseClicked(evt);
             }
         });
         jPanel5.add(btn67);
@@ -2069,9 +1801,9 @@ public class MineApp extends javax.swing.JFrame {
         btn68.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn68.setMaximumSize(new java.awt.Dimension(20, 20));
         btn68.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn68.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn68ActionPerformed(evt);
+        btn68.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn68MouseClicked(evt);
             }
         });
         jPanel5.add(btn68);
@@ -2081,9 +1813,9 @@ public class MineApp extends javax.swing.JFrame {
         btn69.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn69.setMaximumSize(new java.awt.Dimension(20, 20));
         btn69.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn69.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn69ActionPerformed(evt);
+        btn69.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn69MouseClicked(evt);
             }
         });
         jPanel5.add(btn69);
@@ -2093,9 +1825,9 @@ public class MineApp extends javax.swing.JFrame {
         btn70.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn70.setMaximumSize(new java.awt.Dimension(20, 20));
         btn70.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn70.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn70ActionPerformed(evt);
+        btn70.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn70MouseClicked(evt);
             }
         });
         jPanel5.add(btn70);
@@ -2105,9 +1837,9 @@ public class MineApp extends javax.swing.JFrame {
         btn71.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn71.setMaximumSize(new java.awt.Dimension(20, 20));
         btn71.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn71.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn71ActionPerformed(evt);
+        btn71.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn71MouseClicked(evt);
             }
         });
         jPanel5.add(btn71);
@@ -2117,9 +1849,9 @@ public class MineApp extends javax.swing.JFrame {
         btn72.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn72.setMaximumSize(new java.awt.Dimension(20, 20));
         btn72.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn72.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn72ActionPerformed(evt);
+        btn72.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn72MouseClicked(evt);
             }
         });
         jPanel5.add(btn72);
@@ -2129,9 +1861,9 @@ public class MineApp extends javax.swing.JFrame {
         btn73.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn73.setMaximumSize(new java.awt.Dimension(20, 20));
         btn73.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn73.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn73ActionPerformed(evt);
+        btn73.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn73MouseClicked(evt);
             }
         });
         jPanel5.add(btn73);
@@ -2141,9 +1873,9 @@ public class MineApp extends javax.swing.JFrame {
         btn74.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn74.setMaximumSize(new java.awt.Dimension(20, 20));
         btn74.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn74.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn74ActionPerformed(evt);
+        btn74.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn74MouseClicked(evt);
             }
         });
         jPanel5.add(btn74);
@@ -2153,9 +1885,9 @@ public class MineApp extends javax.swing.JFrame {
         btn75.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn75.setMaximumSize(new java.awt.Dimension(20, 20));
         btn75.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn75.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn75ActionPerformed(evt);
+        btn75.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn75MouseClicked(evt);
             }
         });
         jPanel5.add(btn75);
@@ -2165,9 +1897,9 @@ public class MineApp extends javax.swing.JFrame {
         btn76.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn76.setMaximumSize(new java.awt.Dimension(20, 20));
         btn76.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn76.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn76ActionPerformed(evt);
+        btn76.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn76MouseClicked(evt);
             }
         });
         jPanel5.add(btn76);
@@ -2177,9 +1909,9 @@ public class MineApp extends javax.swing.JFrame {
         btn77.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn77.setMaximumSize(new java.awt.Dimension(20, 20));
         btn77.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn77.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn77ActionPerformed(evt);
+        btn77.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn77MouseClicked(evt);
             }
         });
         jPanel5.add(btn77);
@@ -2189,9 +1921,9 @@ public class MineApp extends javax.swing.JFrame {
         btn78.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn78.setMaximumSize(new java.awt.Dimension(20, 20));
         btn78.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn78.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn78ActionPerformed(evt);
+        btn78.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn78MouseClicked(evt);
             }
         });
         jPanel5.add(btn78);
@@ -2201,9 +1933,9 @@ public class MineApp extends javax.swing.JFrame {
         btn79.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn79.setMaximumSize(new java.awt.Dimension(20, 20));
         btn79.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn79.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn79ActionPerformed(evt);
+        btn79.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn79MouseClicked(evt);
             }
         });
         jPanel5.add(btn79);
@@ -2213,9 +1945,9 @@ public class MineApp extends javax.swing.JFrame {
         btn80.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn80.setMaximumSize(new java.awt.Dimension(20, 20));
         btn80.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn80.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn80ActionPerformed(evt);
+        btn80.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn80MouseClicked(evt);
             }
         });
         jPanel5.add(btn80);
@@ -2225,9 +1957,9 @@ public class MineApp extends javax.swing.JFrame {
         btn81.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn81.setMaximumSize(new java.awt.Dimension(20, 20));
         btn81.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn81.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn81ActionPerformed(evt);
+        btn81.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn81MouseClicked(evt);
             }
         });
         jPanel5.add(btn81);
@@ -2237,9 +1969,9 @@ public class MineApp extends javax.swing.JFrame {
         btn82.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn82.setMaximumSize(new java.awt.Dimension(20, 20));
         btn82.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn82.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn82ActionPerformed(evt);
+        btn82.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn82MouseClicked(evt);
             }
         });
         jPanel5.add(btn82);
@@ -2249,9 +1981,9 @@ public class MineApp extends javax.swing.JFrame {
         btn83.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn83.setMaximumSize(new java.awt.Dimension(20, 20));
         btn83.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn83.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn83ActionPerformed(evt);
+        btn83.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn83MouseClicked(evt);
             }
         });
         jPanel5.add(btn83);
@@ -2261,9 +1993,9 @@ public class MineApp extends javax.swing.JFrame {
         btn84.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn84.setMaximumSize(new java.awt.Dimension(20, 20));
         btn84.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn84.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn84ActionPerformed(evt);
+        btn84.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn84MouseClicked(evt);
             }
         });
         jPanel5.add(btn84);
@@ -2273,9 +2005,9 @@ public class MineApp extends javax.swing.JFrame {
         btn85.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn85.setMaximumSize(new java.awt.Dimension(20, 20));
         btn85.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn85.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn85ActionPerformed(evt);
+        btn85.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn85MouseClicked(evt);
             }
         });
         jPanel5.add(btn85);
@@ -2285,9 +2017,9 @@ public class MineApp extends javax.swing.JFrame {
         btn86.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn86.setMaximumSize(new java.awt.Dimension(20, 20));
         btn86.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn86.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn86ActionPerformed(evt);
+        btn86.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn86MouseClicked(evt);
             }
         });
         jPanel5.add(btn86);
@@ -2297,9 +2029,9 @@ public class MineApp extends javax.swing.JFrame {
         btn87.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn87.setMaximumSize(new java.awt.Dimension(20, 20));
         btn87.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn87.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn87ActionPerformed(evt);
+        btn87.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn87MouseClicked(evt);
             }
         });
         jPanel5.add(btn87);
@@ -2309,9 +2041,9 @@ public class MineApp extends javax.swing.JFrame {
         btn88.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn88.setMaximumSize(new java.awt.Dimension(20, 20));
         btn88.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn88.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn88ActionPerformed(evt);
+        btn88.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn88MouseClicked(evt);
             }
         });
         jPanel5.add(btn88);
@@ -2321,9 +2053,9 @@ public class MineApp extends javax.swing.JFrame {
         btn89.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn89.setMaximumSize(new java.awt.Dimension(20, 20));
         btn89.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn89.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn89ActionPerformed(evt);
+        btn89.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn89MouseClicked(evt);
             }
         });
         jPanel5.add(btn89);
@@ -2333,9 +2065,9 @@ public class MineApp extends javax.swing.JFrame {
         btn90.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn90.setMaximumSize(new java.awt.Dimension(20, 20));
         btn90.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn90.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn90ActionPerformed(evt);
+        btn90.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn90MouseClicked(evt);
             }
         });
         jPanel5.add(btn90);
@@ -2345,9 +2077,9 @@ public class MineApp extends javax.swing.JFrame {
         btn91.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn91.setMaximumSize(new java.awt.Dimension(20, 20));
         btn91.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn91.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn91ActionPerformed(evt);
+        btn91.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn91MouseClicked(evt);
             }
         });
         jPanel5.add(btn91);
@@ -2357,9 +2089,9 @@ public class MineApp extends javax.swing.JFrame {
         btn92.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn92.setMaximumSize(new java.awt.Dimension(20, 20));
         btn92.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn92.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn92ActionPerformed(evt);
+        btn92.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn92MouseClicked(evt);
             }
         });
         jPanel5.add(btn92);
@@ -2369,9 +2101,9 @@ public class MineApp extends javax.swing.JFrame {
         btn93.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn93.setMaximumSize(new java.awt.Dimension(20, 20));
         btn93.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn93.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn93ActionPerformed(evt);
+        btn93.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn93MouseClicked(evt);
             }
         });
         jPanel5.add(btn93);
@@ -2381,9 +2113,9 @@ public class MineApp extends javax.swing.JFrame {
         btn94.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn94.setMaximumSize(new java.awt.Dimension(20, 20));
         btn94.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn94.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn94ActionPerformed(evt);
+        btn94.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn94MouseClicked(evt);
             }
         });
         jPanel5.add(btn94);
@@ -2393,9 +2125,9 @@ public class MineApp extends javax.swing.JFrame {
         btn95.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn95.setMaximumSize(new java.awt.Dimension(20, 20));
         btn95.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn95.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn95ActionPerformed(evt);
+        btn95.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn95MouseClicked(evt);
             }
         });
         jPanel5.add(btn95);
@@ -2405,9 +2137,9 @@ public class MineApp extends javax.swing.JFrame {
         btn96.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn96.setMaximumSize(new java.awt.Dimension(20, 20));
         btn96.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn96.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn96ActionPerformed(evt);
+        btn96.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn96MouseClicked(evt);
             }
         });
         jPanel5.add(btn96);
@@ -2417,9 +2149,9 @@ public class MineApp extends javax.swing.JFrame {
         btn97.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn97.setMaximumSize(new java.awt.Dimension(20, 20));
         btn97.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn97.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn97ActionPerformed(evt);
+        btn97.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn97MouseClicked(evt);
             }
         });
         jPanel5.add(btn97);
@@ -2429,9 +2161,9 @@ public class MineApp extends javax.swing.JFrame {
         btn98.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn98.setMaximumSize(new java.awt.Dimension(20, 20));
         btn98.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn98.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn98ActionPerformed(evt);
+        btn98.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn98MouseClicked(evt);
             }
         });
         jPanel5.add(btn98);
@@ -2441,9 +2173,9 @@ public class MineApp extends javax.swing.JFrame {
         btn99.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn99.setMaximumSize(new java.awt.Dimension(20, 20));
         btn99.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn99.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn99ActionPerformed(evt);
+        btn99.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn99MouseClicked(evt);
             }
         });
         jPanel5.add(btn99);
@@ -2453,9 +2185,9 @@ public class MineApp extends javax.swing.JFrame {
         btn100.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn100.setMaximumSize(new java.awt.Dimension(20, 20));
         btn100.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn100.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn100ActionPerformed(evt);
+        btn100.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn100MouseClicked(evt);
             }
         });
         jPanel5.add(btn100);
@@ -2465,9 +2197,9 @@ public class MineApp extends javax.swing.JFrame {
         btn101.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn101.setMaximumSize(new java.awt.Dimension(20, 20));
         btn101.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn101.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn101ActionPerformed(evt);
+        btn101.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn101MouseClicked(evt);
             }
         });
         jPanel5.add(btn101);
@@ -2477,9 +2209,9 @@ public class MineApp extends javax.swing.JFrame {
         btn102.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn102.setMaximumSize(new java.awt.Dimension(20, 20));
         btn102.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn102.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn102ActionPerformed(evt);
+        btn102.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn102MouseClicked(evt);
             }
         });
         jPanel5.add(btn102);
@@ -2489,9 +2221,9 @@ public class MineApp extends javax.swing.JFrame {
         btn103.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn103.setMaximumSize(new java.awt.Dimension(20, 20));
         btn103.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn103.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn103ActionPerformed(evt);
+        btn103.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn103MouseClicked(evt);
             }
         });
         jPanel5.add(btn103);
@@ -2501,9 +2233,9 @@ public class MineApp extends javax.swing.JFrame {
         btn104.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn104.setMaximumSize(new java.awt.Dimension(20, 20));
         btn104.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn104.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn104ActionPerformed(evt);
+        btn104.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn104MouseClicked(evt);
             }
         });
         jPanel5.add(btn104);
@@ -2513,9 +2245,9 @@ public class MineApp extends javax.swing.JFrame {
         btn105.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn105.setMaximumSize(new java.awt.Dimension(20, 20));
         btn105.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn105.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn105ActionPerformed(evt);
+        btn105.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn105MouseClicked(evt);
             }
         });
         jPanel5.add(btn105);
@@ -2525,9 +2257,9 @@ public class MineApp extends javax.swing.JFrame {
         btn106.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn106.setMaximumSize(new java.awt.Dimension(20, 20));
         btn106.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn106.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn106ActionPerformed(evt);
+        btn106.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn106MouseClicked(evt);
             }
         });
         jPanel5.add(btn106);
@@ -2537,9 +2269,9 @@ public class MineApp extends javax.swing.JFrame {
         btn107.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn107.setMaximumSize(new java.awt.Dimension(20, 20));
         btn107.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn107.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn107ActionPerformed(evt);
+        btn107.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn107MouseClicked(evt);
             }
         });
         jPanel5.add(btn107);
@@ -2549,9 +2281,9 @@ public class MineApp extends javax.swing.JFrame {
         btn108.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn108.setMaximumSize(new java.awt.Dimension(20, 20));
         btn108.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn108.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn108ActionPerformed(evt);
+        btn108.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn108MouseClicked(evt);
             }
         });
         jPanel5.add(btn108);
@@ -2561,9 +2293,9 @@ public class MineApp extends javax.swing.JFrame {
         btn109.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn109.setMaximumSize(new java.awt.Dimension(20, 20));
         btn109.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn109.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn109ActionPerformed(evt);
+        btn109.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn109MouseClicked(evt);
             }
         });
         jPanel5.add(btn109);
@@ -2573,9 +2305,9 @@ public class MineApp extends javax.swing.JFrame {
         btn110.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn110.setMaximumSize(new java.awt.Dimension(20, 20));
         btn110.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn110.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn110ActionPerformed(evt);
+        btn110.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn110MouseClicked(evt);
             }
         });
         jPanel5.add(btn110);
@@ -2585,9 +2317,9 @@ public class MineApp extends javax.swing.JFrame {
         btn111.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn111.setMaximumSize(new java.awt.Dimension(20, 20));
         btn111.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn111.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn111ActionPerformed(evt);
+        btn111.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn111MouseClicked(evt);
             }
         });
         jPanel5.add(btn111);
@@ -2597,9 +2329,9 @@ public class MineApp extends javax.swing.JFrame {
         btn112.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn112.setMaximumSize(new java.awt.Dimension(20, 20));
         btn112.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn112.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn112ActionPerformed(evt);
+        btn112.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn112MouseClicked(evt);
             }
         });
         jPanel5.add(btn112);
@@ -2609,9 +2341,9 @@ public class MineApp extends javax.swing.JFrame {
         btn113.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn113.setMaximumSize(new java.awt.Dimension(20, 20));
         btn113.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn113.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn113ActionPerformed(evt);
+        btn113.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn113MouseClicked(evt);
             }
         });
         jPanel5.add(btn113);
@@ -2621,9 +2353,9 @@ public class MineApp extends javax.swing.JFrame {
         btn114.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn114.setMaximumSize(new java.awt.Dimension(20, 20));
         btn114.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn114.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn114ActionPerformed(evt);
+        btn114.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn114MouseClicked(evt);
             }
         });
         jPanel5.add(btn114);
@@ -2633,9 +2365,9 @@ public class MineApp extends javax.swing.JFrame {
         btn115.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn115.setMaximumSize(new java.awt.Dimension(20, 20));
         btn115.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn115.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn115ActionPerformed(evt);
+        btn115.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn115MouseClicked(evt);
             }
         });
         jPanel5.add(btn115);
@@ -2645,9 +2377,9 @@ public class MineApp extends javax.swing.JFrame {
         btn116.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn116.setMaximumSize(new java.awt.Dimension(20, 20));
         btn116.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn116.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn116ActionPerformed(evt);
+        btn116.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn116MouseClicked(evt);
             }
         });
         jPanel5.add(btn116);
@@ -2657,9 +2389,9 @@ public class MineApp extends javax.swing.JFrame {
         btn117.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn117.setMaximumSize(new java.awt.Dimension(20, 20));
         btn117.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn117.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn117ActionPerformed(evt);
+        btn117.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn117MouseClicked(evt);
             }
         });
         jPanel5.add(btn117);
@@ -2669,9 +2401,9 @@ public class MineApp extends javax.swing.JFrame {
         btn118.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn118.setMaximumSize(new java.awt.Dimension(20, 20));
         btn118.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn118.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn118ActionPerformed(evt);
+        btn118.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn118MouseClicked(evt);
             }
         });
         jPanel5.add(btn118);
@@ -2681,9 +2413,9 @@ public class MineApp extends javax.swing.JFrame {
         btn119.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn119.setMaximumSize(new java.awt.Dimension(20, 20));
         btn119.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn119.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn119ActionPerformed(evt);
+        btn119.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn119MouseClicked(evt);
             }
         });
         jPanel5.add(btn119);
@@ -2693,9 +2425,9 @@ public class MineApp extends javax.swing.JFrame {
         btn120.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn120.setMaximumSize(new java.awt.Dimension(20, 20));
         btn120.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn120.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn120ActionPerformed(evt);
+        btn120.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn120MouseClicked(evt);
             }
         });
         jPanel5.add(btn120);
@@ -2705,9 +2437,9 @@ public class MineApp extends javax.swing.JFrame {
         btn121.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn121.setMaximumSize(new java.awt.Dimension(20, 20));
         btn121.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn121.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn121ActionPerformed(evt);
+        btn121.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn121MouseClicked(evt);
             }
         });
         jPanel5.add(btn121);
@@ -2717,9 +2449,9 @@ public class MineApp extends javax.swing.JFrame {
         btn122.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn122.setMaximumSize(new java.awt.Dimension(20, 20));
         btn122.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn122.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn122ActionPerformed(evt);
+        btn122.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn122MouseClicked(evt);
             }
         });
         jPanel5.add(btn122);
@@ -2729,9 +2461,9 @@ public class MineApp extends javax.swing.JFrame {
         btn123.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn123.setMaximumSize(new java.awt.Dimension(20, 20));
         btn123.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn123.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn123ActionPerformed(evt);
+        btn123.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn123MouseClicked(evt);
             }
         });
         jPanel5.add(btn123);
@@ -2741,9 +2473,9 @@ public class MineApp extends javax.swing.JFrame {
         btn124.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn124.setMaximumSize(new java.awt.Dimension(20, 20));
         btn124.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn124.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn124ActionPerformed(evt);
+        btn124.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn124MouseClicked(evt);
             }
         });
         jPanel5.add(btn124);
@@ -2753,9 +2485,9 @@ public class MineApp extends javax.swing.JFrame {
         btn125.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn125.setMaximumSize(new java.awt.Dimension(20, 20));
         btn125.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn125.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn125ActionPerformed(evt);
+        btn125.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn125MouseClicked(evt);
             }
         });
         jPanel5.add(btn125);
@@ -2765,9 +2497,9 @@ public class MineApp extends javax.swing.JFrame {
         btn126.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn126.setMaximumSize(new java.awt.Dimension(20, 20));
         btn126.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn126.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn126ActionPerformed(evt);
+        btn126.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn126MouseClicked(evt);
             }
         });
         jPanel5.add(btn126);
@@ -2777,9 +2509,9 @@ public class MineApp extends javax.swing.JFrame {
         btn127.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn127.setMaximumSize(new java.awt.Dimension(20, 20));
         btn127.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn127.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn127ActionPerformed(evt);
+        btn127.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn127MouseClicked(evt);
             }
         });
         jPanel5.add(btn127);
@@ -2789,9 +2521,9 @@ public class MineApp extends javax.swing.JFrame {
         btn128.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn128.setMaximumSize(new java.awt.Dimension(20, 20));
         btn128.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn128.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn128ActionPerformed(evt);
+        btn128.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn128MouseClicked(evt);
             }
         });
         jPanel5.add(btn128);
@@ -2801,9 +2533,9 @@ public class MineApp extends javax.swing.JFrame {
         btn129.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn129.setMaximumSize(new java.awt.Dimension(20, 20));
         btn129.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn129.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn129ActionPerformed(evt);
+        btn129.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn129MouseClicked(evt);
             }
         });
         jPanel5.add(btn129);
@@ -2813,9 +2545,9 @@ public class MineApp extends javax.swing.JFrame {
         btn130.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn130.setMaximumSize(new java.awt.Dimension(20, 20));
         btn130.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn130.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn130ActionPerformed(evt);
+        btn130.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn130MouseClicked(evt);
             }
         });
         jPanel5.add(btn130);
@@ -2825,9 +2557,9 @@ public class MineApp extends javax.swing.JFrame {
         btn131.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn131.setMaximumSize(new java.awt.Dimension(20, 20));
         btn131.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn131.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn131ActionPerformed(evt);
+        btn131.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn131MouseClicked(evt);
             }
         });
         jPanel5.add(btn131);
@@ -2837,9 +2569,9 @@ public class MineApp extends javax.swing.JFrame {
         btn132.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn132.setMaximumSize(new java.awt.Dimension(20, 20));
         btn132.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn132.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn132ActionPerformed(evt);
+        btn132.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn132MouseClicked(evt);
             }
         });
         jPanel5.add(btn132);
@@ -2849,9 +2581,9 @@ public class MineApp extends javax.swing.JFrame {
         btn133.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn133.setMaximumSize(new java.awt.Dimension(20, 20));
         btn133.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn133.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn133ActionPerformed(evt);
+        btn133.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn133MouseClicked(evt);
             }
         });
         jPanel5.add(btn133);
@@ -2861,9 +2593,9 @@ public class MineApp extends javax.swing.JFrame {
         btn134.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn134.setMaximumSize(new java.awt.Dimension(20, 20));
         btn134.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn134.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn134ActionPerformed(evt);
+        btn134.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn134MouseClicked(evt);
             }
         });
         jPanel5.add(btn134);
@@ -2873,9 +2605,9 @@ public class MineApp extends javax.swing.JFrame {
         btn135.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn135.setMaximumSize(new java.awt.Dimension(20, 20));
         btn135.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn135.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn135ActionPerformed(evt);
+        btn135.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn135MouseClicked(evt);
             }
         });
         jPanel5.add(btn135);
@@ -2885,9 +2617,9 @@ public class MineApp extends javax.swing.JFrame {
         btn136.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn136.setMaximumSize(new java.awt.Dimension(20, 20));
         btn136.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn136.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn136ActionPerformed(evt);
+        btn136.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn136MouseClicked(evt);
             }
         });
         jPanel5.add(btn136);
@@ -2897,9 +2629,9 @@ public class MineApp extends javax.swing.JFrame {
         btn137.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn137.setMaximumSize(new java.awt.Dimension(20, 20));
         btn137.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn137.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn137ActionPerformed(evt);
+        btn137.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn137MouseClicked(evt);
             }
         });
         jPanel5.add(btn137);
@@ -2909,9 +2641,9 @@ public class MineApp extends javax.swing.JFrame {
         btn138.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn138.setMaximumSize(new java.awt.Dimension(20, 20));
         btn138.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn138.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn138ActionPerformed(evt);
+        btn138.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn138MouseClicked(evt);
             }
         });
         jPanel5.add(btn138);
@@ -2921,9 +2653,9 @@ public class MineApp extends javax.swing.JFrame {
         btn139.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn139.setMaximumSize(new java.awt.Dimension(20, 20));
         btn139.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn139.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn139ActionPerformed(evt);
+        btn139.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn139MouseClicked(evt);
             }
         });
         jPanel5.add(btn139);
@@ -2933,9 +2665,9 @@ public class MineApp extends javax.swing.JFrame {
         btn140.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn140.setMaximumSize(new java.awt.Dimension(20, 20));
         btn140.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn140.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn140ActionPerformed(evt);
+        btn140.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn140MouseClicked(evt);
             }
         });
         jPanel5.add(btn140);
@@ -2945,9 +2677,9 @@ public class MineApp extends javax.swing.JFrame {
         btn141.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn141.setMaximumSize(new java.awt.Dimension(20, 20));
         btn141.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn141.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn141ActionPerformed(evt);
+        btn141.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn141MouseClicked(evt);
             }
         });
         jPanel5.add(btn141);
@@ -2957,9 +2689,9 @@ public class MineApp extends javax.swing.JFrame {
         btn142.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn142.setMaximumSize(new java.awt.Dimension(20, 20));
         btn142.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn142.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn142ActionPerformed(evt);
+        btn142.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn142MouseClicked(evt);
             }
         });
         jPanel5.add(btn142);
@@ -2969,9 +2701,9 @@ public class MineApp extends javax.swing.JFrame {
         btn143.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn143.setMaximumSize(new java.awt.Dimension(20, 20));
         btn143.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn143.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn143ActionPerformed(evt);
+        btn143.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn143MouseClicked(evt);
             }
         });
         jPanel5.add(btn143);
@@ -2981,9 +2713,9 @@ public class MineApp extends javax.swing.JFrame {
         btn144.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn144.setMaximumSize(new java.awt.Dimension(20, 20));
         btn144.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn144.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn144ActionPerformed(evt);
+        btn144.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn144MouseClicked(evt);
             }
         });
         jPanel5.add(btn144);
@@ -2993,9 +2725,9 @@ public class MineApp extends javax.swing.JFrame {
         btn145.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn145.setMaximumSize(new java.awt.Dimension(20, 20));
         btn145.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn145.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn145ActionPerformed(evt);
+        btn145.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn145MouseClicked(evt);
             }
         });
         jPanel5.add(btn145);
@@ -3005,9 +2737,9 @@ public class MineApp extends javax.swing.JFrame {
         btn146.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn146.setMaximumSize(new java.awt.Dimension(20, 20));
         btn146.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn146.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn146ActionPerformed(evt);
+        btn146.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn146MouseClicked(evt);
             }
         });
         jPanel5.add(btn146);
@@ -3017,9 +2749,9 @@ public class MineApp extends javax.swing.JFrame {
         btn147.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn147.setMaximumSize(new java.awt.Dimension(20, 20));
         btn147.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn147.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn147ActionPerformed(evt);
+        btn147.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn147MouseClicked(evt);
             }
         });
         jPanel5.add(btn147);
@@ -3029,9 +2761,9 @@ public class MineApp extends javax.swing.JFrame {
         btn148.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn148.setMaximumSize(new java.awt.Dimension(20, 20));
         btn148.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn148.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn148ActionPerformed(evt);
+        btn148.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn148MouseClicked(evt);
             }
         });
         jPanel5.add(btn148);
@@ -3041,9 +2773,9 @@ public class MineApp extends javax.swing.JFrame {
         btn149.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn149.setMaximumSize(new java.awt.Dimension(20, 20));
         btn149.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn149.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn149ActionPerformed(evt);
+        btn149.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn149MouseClicked(evt);
             }
         });
         jPanel5.add(btn149);
@@ -3053,9 +2785,9 @@ public class MineApp extends javax.swing.JFrame {
         btn150.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn150.setMaximumSize(new java.awt.Dimension(20, 20));
         btn150.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn150.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn150ActionPerformed(evt);
+        btn150.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn150MouseClicked(evt);
             }
         });
         jPanel5.add(btn150);
@@ -3065,9 +2797,9 @@ public class MineApp extends javax.swing.JFrame {
         btn151.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn151.setMaximumSize(new java.awt.Dimension(20, 20));
         btn151.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn151.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn151ActionPerformed(evt);
+        btn151.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn151MouseClicked(evt);
             }
         });
         jPanel5.add(btn151);
@@ -3077,9 +2809,9 @@ public class MineApp extends javax.swing.JFrame {
         btn152.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn152.setMaximumSize(new java.awt.Dimension(20, 20));
         btn152.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn152.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn152ActionPerformed(evt);
+        btn152.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn152MouseClicked(evt);
             }
         });
         jPanel5.add(btn152);
@@ -3089,9 +2821,9 @@ public class MineApp extends javax.swing.JFrame {
         btn153.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn153.setMaximumSize(new java.awt.Dimension(20, 20));
         btn153.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn153.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn153ActionPerformed(evt);
+        btn153.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn153MouseClicked(evt);
             }
         });
         jPanel5.add(btn153);
@@ -3101,9 +2833,9 @@ public class MineApp extends javax.swing.JFrame {
         btn154.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn154.setMaximumSize(new java.awt.Dimension(20, 20));
         btn154.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn154.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn154ActionPerformed(evt);
+        btn154.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn154MouseClicked(evt);
             }
         });
         jPanel5.add(btn154);
@@ -3113,9 +2845,9 @@ public class MineApp extends javax.swing.JFrame {
         btn155.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn155.setMaximumSize(new java.awt.Dimension(20, 20));
         btn155.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn155.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn155ActionPerformed(evt);
+        btn155.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn155MouseClicked(evt);
             }
         });
         jPanel5.add(btn155);
@@ -3125,9 +2857,9 @@ public class MineApp extends javax.swing.JFrame {
         btn156.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn156.setMaximumSize(new java.awt.Dimension(20, 20));
         btn156.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn156.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn156ActionPerformed(evt);
+        btn156.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn156MouseClicked(evt);
             }
         });
         jPanel5.add(btn156);
@@ -3137,9 +2869,9 @@ public class MineApp extends javax.swing.JFrame {
         btn157.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn157.setMaximumSize(new java.awt.Dimension(20, 20));
         btn157.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn157.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn157ActionPerformed(evt);
+        btn157.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn157MouseClicked(evt);
             }
         });
         jPanel5.add(btn157);
@@ -3149,9 +2881,9 @@ public class MineApp extends javax.swing.JFrame {
         btn158.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn158.setMaximumSize(new java.awt.Dimension(20, 20));
         btn158.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn158.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn158ActionPerformed(evt);
+        btn158.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn158MouseClicked(evt);
             }
         });
         jPanel5.add(btn158);
@@ -3161,9 +2893,9 @@ public class MineApp extends javax.swing.JFrame {
         btn159.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn159.setMaximumSize(new java.awt.Dimension(20, 20));
         btn159.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn159.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn159ActionPerformed(evt);
+        btn159.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn159MouseClicked(evt);
             }
         });
         jPanel5.add(btn159);
@@ -3173,9 +2905,9 @@ public class MineApp extends javax.swing.JFrame {
         btn160.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn160.setMaximumSize(new java.awt.Dimension(20, 20));
         btn160.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn160.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn160ActionPerformed(evt);
+        btn160.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn160MouseClicked(evt);
             }
         });
         jPanel5.add(btn160);
@@ -3185,9 +2917,9 @@ public class MineApp extends javax.swing.JFrame {
         btn161.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn161.setMaximumSize(new java.awt.Dimension(20, 20));
         btn161.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn161.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn161ActionPerformed(evt);
+        btn161.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn161MouseClicked(evt);
             }
         });
         jPanel5.add(btn161);
@@ -3197,9 +2929,9 @@ public class MineApp extends javax.swing.JFrame {
         btn162.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn162.setMaximumSize(new java.awt.Dimension(20, 20));
         btn162.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn162.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn162ActionPerformed(evt);
+        btn162.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn162MouseClicked(evt);
             }
         });
         jPanel5.add(btn162);
@@ -3209,9 +2941,9 @@ public class MineApp extends javax.swing.JFrame {
         btn163.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn163.setMaximumSize(new java.awt.Dimension(20, 20));
         btn163.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn163.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn163ActionPerformed(evt);
+        btn163.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn163MouseClicked(evt);
             }
         });
         jPanel5.add(btn163);
@@ -3221,9 +2953,9 @@ public class MineApp extends javax.swing.JFrame {
         btn164.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn164.setMaximumSize(new java.awt.Dimension(20, 20));
         btn164.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn164.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn164ActionPerformed(evt);
+        btn164.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn164MouseClicked(evt);
             }
         });
         jPanel5.add(btn164);
@@ -3233,9 +2965,9 @@ public class MineApp extends javax.swing.JFrame {
         btn165.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn165.setMaximumSize(new java.awt.Dimension(20, 20));
         btn165.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn165.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn165ActionPerformed(evt);
+        btn165.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn165MouseClicked(evt);
             }
         });
         jPanel5.add(btn165);
@@ -3245,9 +2977,9 @@ public class MineApp extends javax.swing.JFrame {
         btn166.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn166.setMaximumSize(new java.awt.Dimension(20, 20));
         btn166.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn166.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn166ActionPerformed(evt);
+        btn166.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn166MouseClicked(evt);
             }
         });
         jPanel5.add(btn166);
@@ -3257,9 +2989,9 @@ public class MineApp extends javax.swing.JFrame {
         btn167.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn167.setMaximumSize(new java.awt.Dimension(20, 20));
         btn167.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn167.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn167ActionPerformed(evt);
+        btn167.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn167MouseClicked(evt);
             }
         });
         jPanel5.add(btn167);
@@ -3269,9 +3001,9 @@ public class MineApp extends javax.swing.JFrame {
         btn168.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn168.setMaximumSize(new java.awt.Dimension(20, 20));
         btn168.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn168.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn168ActionPerformed(evt);
+        btn168.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn168MouseClicked(evt);
             }
         });
         jPanel5.add(btn168);
@@ -3281,9 +3013,9 @@ public class MineApp extends javax.swing.JFrame {
         btn169.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn169.setMaximumSize(new java.awt.Dimension(20, 20));
         btn169.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn169.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn169ActionPerformed(evt);
+        btn169.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn169MouseClicked(evt);
             }
         });
         jPanel5.add(btn169);
@@ -3293,9 +3025,9 @@ public class MineApp extends javax.swing.JFrame {
         btn170.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn170.setMaximumSize(new java.awt.Dimension(20, 20));
         btn170.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn170.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn170ActionPerformed(evt);
+        btn170.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn170MouseClicked(evt);
             }
         });
         jPanel5.add(btn170);
@@ -3305,9 +3037,9 @@ public class MineApp extends javax.swing.JFrame {
         btn171.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn171.setMaximumSize(new java.awt.Dimension(20, 20));
         btn171.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn171.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn171ActionPerformed(evt);
+        btn171.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn171MouseClicked(evt);
             }
         });
         jPanel5.add(btn171);
@@ -3317,9 +3049,9 @@ public class MineApp extends javax.swing.JFrame {
         btn172.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn172.setMaximumSize(new java.awt.Dimension(20, 20));
         btn172.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn172.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn172ActionPerformed(evt);
+        btn172.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn172MouseClicked(evt);
             }
         });
         jPanel5.add(btn172);
@@ -3329,9 +3061,9 @@ public class MineApp extends javax.swing.JFrame {
         btn173.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn173.setMaximumSize(new java.awt.Dimension(20, 20));
         btn173.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn173.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn173ActionPerformed(evt);
+        btn173.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn173MouseClicked(evt);
             }
         });
         jPanel5.add(btn173);
@@ -3341,9 +3073,9 @@ public class MineApp extends javax.swing.JFrame {
         btn174.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn174.setMaximumSize(new java.awt.Dimension(20, 20));
         btn174.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn174.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn174ActionPerformed(evt);
+        btn174.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn174MouseClicked(evt);
             }
         });
         jPanel5.add(btn174);
@@ -3353,9 +3085,9 @@ public class MineApp extends javax.swing.JFrame {
         btn175.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn175.setMaximumSize(new java.awt.Dimension(20, 20));
         btn175.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn175.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn175ActionPerformed(evt);
+        btn175.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn175MouseClicked(evt);
             }
         });
         jPanel5.add(btn175);
@@ -3365,9 +3097,9 @@ public class MineApp extends javax.swing.JFrame {
         btn176.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn176.setMaximumSize(new java.awt.Dimension(20, 20));
         btn176.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn176.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn176ActionPerformed(evt);
+        btn176.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn176MouseClicked(evt);
             }
         });
         jPanel5.add(btn176);
@@ -3377,9 +3109,9 @@ public class MineApp extends javax.swing.JFrame {
         btn177.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn177.setMaximumSize(new java.awt.Dimension(20, 20));
         btn177.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn177.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn177ActionPerformed(evt);
+        btn177.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn177MouseClicked(evt);
             }
         });
         jPanel5.add(btn177);
@@ -3389,9 +3121,9 @@ public class MineApp extends javax.swing.JFrame {
         btn178.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn178.setMaximumSize(new java.awt.Dimension(20, 20));
         btn178.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn178.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn178ActionPerformed(evt);
+        btn178.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn178MouseClicked(evt);
             }
         });
         jPanel5.add(btn178);
@@ -3401,9 +3133,9 @@ public class MineApp extends javax.swing.JFrame {
         btn179.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn179.setMaximumSize(new java.awt.Dimension(20, 20));
         btn179.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn179.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn179ActionPerformed(evt);
+        btn179.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn179MouseClicked(evt);
             }
         });
         jPanel5.add(btn179);
@@ -3413,9 +3145,9 @@ public class MineApp extends javax.swing.JFrame {
         btn180.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn180.setMaximumSize(new java.awt.Dimension(20, 20));
         btn180.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn180.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn180ActionPerformed(evt);
+        btn180.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn180MouseClicked(evt);
             }
         });
         jPanel5.add(btn180);
@@ -3425,9 +3157,9 @@ public class MineApp extends javax.swing.JFrame {
         btn181.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn181.setMaximumSize(new java.awt.Dimension(20, 20));
         btn181.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn181.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn181ActionPerformed(evt);
+        btn181.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn181MouseClicked(evt);
             }
         });
         jPanel5.add(btn181);
@@ -3437,9 +3169,9 @@ public class MineApp extends javax.swing.JFrame {
         btn182.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn182.setMaximumSize(new java.awt.Dimension(20, 20));
         btn182.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn182.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn182ActionPerformed(evt);
+        btn182.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn182MouseClicked(evt);
             }
         });
         jPanel5.add(btn182);
@@ -3449,9 +3181,9 @@ public class MineApp extends javax.swing.JFrame {
         btn183.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn183.setMaximumSize(new java.awt.Dimension(20, 20));
         btn183.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn183.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn183ActionPerformed(evt);
+        btn183.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn183MouseClicked(evt);
             }
         });
         jPanel5.add(btn183);
@@ -3461,9 +3193,9 @@ public class MineApp extends javax.swing.JFrame {
         btn184.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn184.setMaximumSize(new java.awt.Dimension(20, 20));
         btn184.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn184.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn184ActionPerformed(evt);
+        btn184.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn184MouseClicked(evt);
             }
         });
         jPanel5.add(btn184);
@@ -3473,9 +3205,9 @@ public class MineApp extends javax.swing.JFrame {
         btn185.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn185.setMaximumSize(new java.awt.Dimension(20, 20));
         btn185.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn185.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn185ActionPerformed(evt);
+        btn185.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn185MouseClicked(evt);
             }
         });
         jPanel5.add(btn185);
@@ -3485,9 +3217,9 @@ public class MineApp extends javax.swing.JFrame {
         btn186.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn186.setMaximumSize(new java.awt.Dimension(20, 20));
         btn186.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn186.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn186ActionPerformed(evt);
+        btn186.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn186MouseClicked(evt);
             }
         });
         jPanel5.add(btn186);
@@ -3497,9 +3229,9 @@ public class MineApp extends javax.swing.JFrame {
         btn187.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn187.setMaximumSize(new java.awt.Dimension(20, 20));
         btn187.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn187.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn187ActionPerformed(evt);
+        btn187.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn187MouseClicked(evt);
             }
         });
         jPanel5.add(btn187);
@@ -3509,9 +3241,9 @@ public class MineApp extends javax.swing.JFrame {
         btn188.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn188.setMaximumSize(new java.awt.Dimension(20, 20));
         btn188.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn188.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn188ActionPerformed(evt);
+        btn188.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn188MouseClicked(evt);
             }
         });
         jPanel5.add(btn188);
@@ -3521,9 +3253,9 @@ public class MineApp extends javax.swing.JFrame {
         btn189.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn189.setMaximumSize(new java.awt.Dimension(20, 20));
         btn189.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn189.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn189ActionPerformed(evt);
+        btn189.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn189MouseClicked(evt);
             }
         });
         jPanel5.add(btn189);
@@ -3533,9 +3265,9 @@ public class MineApp extends javax.swing.JFrame {
         btn190.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn190.setMaximumSize(new java.awt.Dimension(20, 20));
         btn190.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn190.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn190ActionPerformed(evt);
+        btn190.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn190MouseClicked(evt);
             }
         });
         jPanel5.add(btn190);
@@ -3545,9 +3277,9 @@ public class MineApp extends javax.swing.JFrame {
         btn191.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn191.setMaximumSize(new java.awt.Dimension(20, 20));
         btn191.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn191.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn191ActionPerformed(evt);
+        btn191.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn191MouseClicked(evt);
             }
         });
         jPanel5.add(btn191);
@@ -3557,9 +3289,9 @@ public class MineApp extends javax.swing.JFrame {
         btn192.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn192.setMaximumSize(new java.awt.Dimension(20, 20));
         btn192.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn192.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn192ActionPerformed(evt);
+        btn192.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn192MouseClicked(evt);
             }
         });
         jPanel5.add(btn192);
@@ -3569,9 +3301,9 @@ public class MineApp extends javax.swing.JFrame {
         btn193.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn193.setMaximumSize(new java.awt.Dimension(20, 20));
         btn193.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn193.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn193ActionPerformed(evt);
+        btn193.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn193MouseClicked(evt);
             }
         });
         jPanel5.add(btn193);
@@ -3581,9 +3313,9 @@ public class MineApp extends javax.swing.JFrame {
         btn194.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn194.setMaximumSize(new java.awt.Dimension(20, 20));
         btn194.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn194.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn194ActionPerformed(evt);
+        btn194.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn194MouseClicked(evt);
             }
         });
         jPanel5.add(btn194);
@@ -3593,9 +3325,9 @@ public class MineApp extends javax.swing.JFrame {
         btn195.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn195.setMaximumSize(new java.awt.Dimension(20, 20));
         btn195.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn195.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn195ActionPerformed(evt);
+        btn195.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn195MouseClicked(evt);
             }
         });
         jPanel5.add(btn195);
@@ -3605,9 +3337,9 @@ public class MineApp extends javax.swing.JFrame {
         btn196.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn196.setMaximumSize(new java.awt.Dimension(20, 20));
         btn196.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn196.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn196ActionPerformed(evt);
+        btn196.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn196MouseClicked(evt);
             }
         });
         jPanel5.add(btn196);
@@ -3617,9 +3349,9 @@ public class MineApp extends javax.swing.JFrame {
         btn197.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn197.setMaximumSize(new java.awt.Dimension(20, 20));
         btn197.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn197.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn197ActionPerformed(evt);
+        btn197.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn197MouseClicked(evt);
             }
         });
         jPanel5.add(btn197);
@@ -3629,9 +3361,9 @@ public class MineApp extends javax.swing.JFrame {
         btn198.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn198.setMaximumSize(new java.awt.Dimension(20, 20));
         btn198.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn198.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn198ActionPerformed(evt);
+        btn198.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn198MouseClicked(evt);
             }
         });
         jPanel5.add(btn198);
@@ -3641,9 +3373,9 @@ public class MineApp extends javax.swing.JFrame {
         btn199.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn199.setMaximumSize(new java.awt.Dimension(20, 20));
         btn199.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn199.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn199ActionPerformed(evt);
+        btn199.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn199MouseClicked(evt);
             }
         });
         jPanel5.add(btn199);
@@ -3653,9 +3385,9 @@ public class MineApp extends javax.swing.JFrame {
         btn200.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn200.setMaximumSize(new java.awt.Dimension(20, 20));
         btn200.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn200.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn200ActionPerformed(evt);
+        btn200.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn200MouseClicked(evt);
             }
         });
         jPanel5.add(btn200);
@@ -3665,9 +3397,9 @@ public class MineApp extends javax.swing.JFrame {
         btn201.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn201.setMaximumSize(new java.awt.Dimension(20, 20));
         btn201.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn201.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn201ActionPerformed(evt);
+        btn201.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn201MouseClicked(evt);
             }
         });
         jPanel5.add(btn201);
@@ -3677,9 +3409,9 @@ public class MineApp extends javax.swing.JFrame {
         btn202.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn202.setMaximumSize(new java.awt.Dimension(20, 20));
         btn202.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn202.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn202ActionPerformed(evt);
+        btn202.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn202MouseClicked(evt);
             }
         });
         jPanel5.add(btn202);
@@ -3689,9 +3421,9 @@ public class MineApp extends javax.swing.JFrame {
         btn203.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn203.setMaximumSize(new java.awt.Dimension(20, 20));
         btn203.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn203.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn203ActionPerformed(evt);
+        btn203.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn203MouseClicked(evt);
             }
         });
         jPanel5.add(btn203);
@@ -3701,9 +3433,9 @@ public class MineApp extends javax.swing.JFrame {
         btn204.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn204.setMaximumSize(new java.awt.Dimension(20, 20));
         btn204.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn204.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn204ActionPerformed(evt);
+        btn204.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn204MouseClicked(evt);
             }
         });
         jPanel5.add(btn204);
@@ -3713,9 +3445,9 @@ public class MineApp extends javax.swing.JFrame {
         btn205.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn205.setMaximumSize(new java.awt.Dimension(20, 20));
         btn205.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn205.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn205ActionPerformed(evt);
+        btn205.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn205MouseClicked(evt);
             }
         });
         jPanel5.add(btn205);
@@ -3725,9 +3457,9 @@ public class MineApp extends javax.swing.JFrame {
         btn206.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn206.setMaximumSize(new java.awt.Dimension(20, 20));
         btn206.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn206.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn206ActionPerformed(evt);
+        btn206.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn206MouseClicked(evt);
             }
         });
         jPanel5.add(btn206);
@@ -3737,9 +3469,9 @@ public class MineApp extends javax.swing.JFrame {
         btn207.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn207.setMaximumSize(new java.awt.Dimension(20, 20));
         btn207.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn207.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn207ActionPerformed(evt);
+        btn207.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn207MouseClicked(evt);
             }
         });
         jPanel5.add(btn207);
@@ -3749,9 +3481,9 @@ public class MineApp extends javax.swing.JFrame {
         btn208.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn208.setMaximumSize(new java.awt.Dimension(20, 20));
         btn208.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn208.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn208ActionPerformed(evt);
+        btn208.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn208MouseClicked(evt);
             }
         });
         jPanel5.add(btn208);
@@ -3761,9 +3493,9 @@ public class MineApp extends javax.swing.JFrame {
         btn209.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn209.setMaximumSize(new java.awt.Dimension(20, 20));
         btn209.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn209.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn209ActionPerformed(evt);
+        btn209.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn209MouseClicked(evt);
             }
         });
         jPanel5.add(btn209);
@@ -3773,9 +3505,9 @@ public class MineApp extends javax.swing.JFrame {
         btn210.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn210.setMaximumSize(new java.awt.Dimension(20, 20));
         btn210.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn210.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn210ActionPerformed(evt);
+        btn210.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn210MouseClicked(evt);
             }
         });
         jPanel5.add(btn210);
@@ -3785,9 +3517,9 @@ public class MineApp extends javax.swing.JFrame {
         btn211.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn211.setMaximumSize(new java.awt.Dimension(20, 20));
         btn211.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn211.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn211ActionPerformed(evt);
+        btn211.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn211MouseClicked(evt);
             }
         });
         jPanel5.add(btn211);
@@ -3797,9 +3529,9 @@ public class MineApp extends javax.swing.JFrame {
         btn212.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn212.setMaximumSize(new java.awt.Dimension(20, 20));
         btn212.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn212.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn212ActionPerformed(evt);
+        btn212.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn212MouseClicked(evt);
             }
         });
         jPanel5.add(btn212);
@@ -3809,9 +3541,9 @@ public class MineApp extends javax.swing.JFrame {
         btn213.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn213.setMaximumSize(new java.awt.Dimension(20, 20));
         btn213.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn213.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn213ActionPerformed(evt);
+        btn213.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn213MouseClicked(evt);
             }
         });
         jPanel5.add(btn213);
@@ -3821,9 +3553,9 @@ public class MineApp extends javax.swing.JFrame {
         btn214.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn214.setMaximumSize(new java.awt.Dimension(20, 20));
         btn214.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn214.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn214ActionPerformed(evt);
+        btn214.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn214MouseClicked(evt);
             }
         });
         jPanel5.add(btn214);
@@ -3833,9 +3565,9 @@ public class MineApp extends javax.swing.JFrame {
         btn215.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn215.setMaximumSize(new java.awt.Dimension(20, 20));
         btn215.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn215.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn215ActionPerformed(evt);
+        btn215.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn215MouseClicked(evt);
             }
         });
         jPanel5.add(btn215);
@@ -3845,9 +3577,9 @@ public class MineApp extends javax.swing.JFrame {
         btn216.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn216.setMaximumSize(new java.awt.Dimension(20, 20));
         btn216.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn216.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn216ActionPerformed(evt);
+        btn216.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn216MouseClicked(evt);
             }
         });
         jPanel5.add(btn216);
@@ -3857,9 +3589,9 @@ public class MineApp extends javax.swing.JFrame {
         btn217.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn217.setMaximumSize(new java.awt.Dimension(20, 20));
         btn217.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn217.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn217ActionPerformed(evt);
+        btn217.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn217MouseClicked(evt);
             }
         });
         jPanel5.add(btn217);
@@ -3869,9 +3601,9 @@ public class MineApp extends javax.swing.JFrame {
         btn218.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn218.setMaximumSize(new java.awt.Dimension(20, 20));
         btn218.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn218.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn218ActionPerformed(evt);
+        btn218.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn218MouseClicked(evt);
             }
         });
         jPanel5.add(btn218);
@@ -3881,9 +3613,9 @@ public class MineApp extends javax.swing.JFrame {
         btn219.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn219.setMaximumSize(new java.awt.Dimension(20, 20));
         btn219.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn219.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn219ActionPerformed(evt);
+        btn219.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn219MouseClicked(evt);
             }
         });
         jPanel5.add(btn219);
@@ -3893,9 +3625,9 @@ public class MineApp extends javax.swing.JFrame {
         btn220.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn220.setMaximumSize(new java.awt.Dimension(20, 20));
         btn220.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn220.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn220ActionPerformed(evt);
+        btn220.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn220MouseClicked(evt);
             }
         });
         jPanel5.add(btn220);
@@ -3905,9 +3637,9 @@ public class MineApp extends javax.swing.JFrame {
         btn221.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn221.setMaximumSize(new java.awt.Dimension(20, 20));
         btn221.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn221.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn221ActionPerformed(evt);
+        btn221.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn221MouseClicked(evt);
             }
         });
         jPanel5.add(btn221);
@@ -3917,9 +3649,9 @@ public class MineApp extends javax.swing.JFrame {
         btn222.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn222.setMaximumSize(new java.awt.Dimension(20, 20));
         btn222.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn222.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn222ActionPerformed(evt);
+        btn222.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn222MouseClicked(evt);
             }
         });
         jPanel5.add(btn222);
@@ -3929,9 +3661,9 @@ public class MineApp extends javax.swing.JFrame {
         btn223.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn223.setMaximumSize(new java.awt.Dimension(20, 20));
         btn223.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn223.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn223ActionPerformed(evt);
+        btn223.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn223MouseClicked(evt);
             }
         });
         jPanel5.add(btn223);
@@ -3941,9 +3673,9 @@ public class MineApp extends javax.swing.JFrame {
         btn224.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn224.setMaximumSize(new java.awt.Dimension(20, 20));
         btn224.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn224.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn224ActionPerformed(evt);
+        btn224.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn224MouseClicked(evt);
             }
         });
         jPanel5.add(btn224);
@@ -3953,9 +3685,9 @@ public class MineApp extends javax.swing.JFrame {
         btn225.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn225.setMaximumSize(new java.awt.Dimension(20, 20));
         btn225.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn225.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn225ActionPerformed(evt);
+        btn225.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn225MouseClicked(evt);
             }
         });
         jPanel5.add(btn225);
@@ -3965,9 +3697,9 @@ public class MineApp extends javax.swing.JFrame {
         btn226.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn226.setMaximumSize(new java.awt.Dimension(20, 20));
         btn226.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn226.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn226ActionPerformed(evt);
+        btn226.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn226MouseClicked(evt);
             }
         });
         jPanel5.add(btn226);
@@ -3977,9 +3709,9 @@ public class MineApp extends javax.swing.JFrame {
         btn227.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn227.setMaximumSize(new java.awt.Dimension(20, 20));
         btn227.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn227.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn227ActionPerformed(evt);
+        btn227.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn227MouseClicked(evt);
             }
         });
         jPanel5.add(btn227);
@@ -3989,9 +3721,9 @@ public class MineApp extends javax.swing.JFrame {
         btn228.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn228.setMaximumSize(new java.awt.Dimension(20, 20));
         btn228.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn228.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn228ActionPerformed(evt);
+        btn228.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn228MouseClicked(evt);
             }
         });
         jPanel5.add(btn228);
@@ -4001,9 +3733,9 @@ public class MineApp extends javax.swing.JFrame {
         btn229.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn229.setMaximumSize(new java.awt.Dimension(20, 20));
         btn229.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn229.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn229ActionPerformed(evt);
+        btn229.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn229MouseClicked(evt);
             }
         });
         jPanel5.add(btn229);
@@ -4013,9 +3745,9 @@ public class MineApp extends javax.swing.JFrame {
         btn230.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn230.setMaximumSize(new java.awt.Dimension(20, 20));
         btn230.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn230.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn230ActionPerformed(evt);
+        btn230.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn230MouseClicked(evt);
             }
         });
         jPanel5.add(btn230);
@@ -4025,9 +3757,9 @@ public class MineApp extends javax.swing.JFrame {
         btn231.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn231.setMaximumSize(new java.awt.Dimension(20, 20));
         btn231.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn231.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn231ActionPerformed(evt);
+        btn231.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn231MouseClicked(evt);
             }
         });
         jPanel5.add(btn231);
@@ -4037,9 +3769,9 @@ public class MineApp extends javax.swing.JFrame {
         btn232.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn232.setMaximumSize(new java.awt.Dimension(20, 20));
         btn232.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn232.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn232ActionPerformed(evt);
+        btn232.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn232MouseClicked(evt);
             }
         });
         jPanel5.add(btn232);
@@ -4049,9 +3781,9 @@ public class MineApp extends javax.swing.JFrame {
         btn233.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn233.setMaximumSize(new java.awt.Dimension(20, 20));
         btn233.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn233.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn233ActionPerformed(evt);
+        btn233.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn233MouseClicked(evt);
             }
         });
         jPanel5.add(btn233);
@@ -4061,9 +3793,9 @@ public class MineApp extends javax.swing.JFrame {
         btn234.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn234.setMaximumSize(new java.awt.Dimension(20, 20));
         btn234.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn234.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn234ActionPerformed(evt);
+        btn234.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn234MouseClicked(evt);
             }
         });
         jPanel5.add(btn234);
@@ -4073,9 +3805,9 @@ public class MineApp extends javax.swing.JFrame {
         btn235.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn235.setMaximumSize(new java.awt.Dimension(20, 20));
         btn235.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn235.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn235ActionPerformed(evt);
+        btn235.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn235MouseClicked(evt);
             }
         });
         jPanel5.add(btn235);
@@ -4085,9 +3817,9 @@ public class MineApp extends javax.swing.JFrame {
         btn236.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn236.setMaximumSize(new java.awt.Dimension(20, 20));
         btn236.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn236.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn236ActionPerformed(evt);
+        btn236.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn236MouseClicked(evt);
             }
         });
         jPanel5.add(btn236);
@@ -4097,9 +3829,9 @@ public class MineApp extends javax.swing.JFrame {
         btn237.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn237.setMaximumSize(new java.awt.Dimension(20, 20));
         btn237.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn237.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn237ActionPerformed(evt);
+        btn237.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn237MouseClicked(evt);
             }
         });
         jPanel5.add(btn237);
@@ -4109,9 +3841,9 @@ public class MineApp extends javax.swing.JFrame {
         btn238.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn238.setMaximumSize(new java.awt.Dimension(20, 20));
         btn238.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn238.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn238ActionPerformed(evt);
+        btn238.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn238MouseClicked(evt);
             }
         });
         jPanel5.add(btn238);
@@ -4121,9 +3853,9 @@ public class MineApp extends javax.swing.JFrame {
         btn239.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn239.setMaximumSize(new java.awt.Dimension(20, 20));
         btn239.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn239.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn239ActionPerformed(evt);
+        btn239.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn239MouseClicked(evt);
             }
         });
         jPanel5.add(btn239);
@@ -4133,9 +3865,9 @@ public class MineApp extends javax.swing.JFrame {
         btn240.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn240.setMaximumSize(new java.awt.Dimension(20, 20));
         btn240.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn240.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn240ActionPerformed(evt);
+        btn240.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn240MouseClicked(evt);
             }
         });
         jPanel5.add(btn240);
@@ -4145,9 +3877,9 @@ public class MineApp extends javax.swing.JFrame {
         btn241.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn241.setMaximumSize(new java.awt.Dimension(20, 20));
         btn241.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn241.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn241ActionPerformed(evt);
+        btn241.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn241MouseClicked(evt);
             }
         });
         jPanel5.add(btn241);
@@ -4157,9 +3889,9 @@ public class MineApp extends javax.swing.JFrame {
         btn242.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn242.setMaximumSize(new java.awt.Dimension(20, 20));
         btn242.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn242.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn242ActionPerformed(evt);
+        btn242.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn242MouseClicked(evt);
             }
         });
         jPanel5.add(btn242);
@@ -4169,9 +3901,9 @@ public class MineApp extends javax.swing.JFrame {
         btn243.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn243.setMaximumSize(new java.awt.Dimension(20, 20));
         btn243.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn243.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn243ActionPerformed(evt);
+        btn243.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn243MouseClicked(evt);
             }
         });
         jPanel5.add(btn243);
@@ -4181,9 +3913,9 @@ public class MineApp extends javax.swing.JFrame {
         btn244.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn244.setMaximumSize(new java.awt.Dimension(20, 20));
         btn244.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn244.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn244ActionPerformed(evt);
+        btn244.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn244MouseClicked(evt);
             }
         });
         jPanel5.add(btn244);
@@ -4193,9 +3925,9 @@ public class MineApp extends javax.swing.JFrame {
         btn245.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn245.setMaximumSize(new java.awt.Dimension(20, 20));
         btn245.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn245.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn245ActionPerformed(evt);
+        btn245.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn245MouseClicked(evt);
             }
         });
         jPanel5.add(btn245);
@@ -4205,9 +3937,9 @@ public class MineApp extends javax.swing.JFrame {
         btn246.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn246.setMaximumSize(new java.awt.Dimension(20, 20));
         btn246.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn246.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn246ActionPerformed(evt);
+        btn246.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn246MouseClicked(evt);
             }
         });
         jPanel5.add(btn246);
@@ -4217,9 +3949,9 @@ public class MineApp extends javax.swing.JFrame {
         btn247.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn247.setMaximumSize(new java.awt.Dimension(20, 20));
         btn247.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn247.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn247ActionPerformed(evt);
+        btn247.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn247MouseClicked(evt);
             }
         });
         jPanel5.add(btn247);
@@ -4229,9 +3961,9 @@ public class MineApp extends javax.swing.JFrame {
         btn248.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn248.setMaximumSize(new java.awt.Dimension(20, 20));
         btn248.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn248.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn248ActionPerformed(evt);
+        btn248.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn248MouseClicked(evt);
             }
         });
         jPanel5.add(btn248);
@@ -4241,9 +3973,9 @@ public class MineApp extends javax.swing.JFrame {
         btn249.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn249.setMaximumSize(new java.awt.Dimension(20, 20));
         btn249.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn249.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn249ActionPerformed(evt);
+        btn249.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn249MouseClicked(evt);
             }
         });
         jPanel5.add(btn249);
@@ -4253,9 +3985,9 @@ public class MineApp extends javax.swing.JFrame {
         btn250.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn250.setMaximumSize(new java.awt.Dimension(20, 20));
         btn250.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn250.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn250ActionPerformed(evt);
+        btn250.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn250MouseClicked(evt);
             }
         });
         jPanel5.add(btn250);
@@ -4265,9 +3997,9 @@ public class MineApp extends javax.swing.JFrame {
         btn251.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn251.setMaximumSize(new java.awt.Dimension(20, 20));
         btn251.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn251.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn251ActionPerformed(evt);
+        btn251.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn251MouseClicked(evt);
             }
         });
         jPanel5.add(btn251);
@@ -4277,9 +4009,9 @@ public class MineApp extends javax.swing.JFrame {
         btn252.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn252.setMaximumSize(new java.awt.Dimension(20, 20));
         btn252.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn252.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn252ActionPerformed(evt);
+        btn252.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn252MouseClicked(evt);
             }
         });
         jPanel5.add(btn252);
@@ -4289,9 +4021,9 @@ public class MineApp extends javax.swing.JFrame {
         btn253.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn253.setMaximumSize(new java.awt.Dimension(20, 20));
         btn253.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn253.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn253ActionPerformed(evt);
+        btn253.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn253MouseClicked(evt);
             }
         });
         jPanel5.add(btn253);
@@ -4301,9 +4033,9 @@ public class MineApp extends javax.swing.JFrame {
         btn254.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn254.setMaximumSize(new java.awt.Dimension(20, 20));
         btn254.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn254.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn254ActionPerformed(evt);
+        btn254.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn254MouseClicked(evt);
             }
         });
         jPanel5.add(btn254);
@@ -4313,9 +4045,9 @@ public class MineApp extends javax.swing.JFrame {
         btn255.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn255.setMaximumSize(new java.awt.Dimension(20, 20));
         btn255.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn255.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn255ActionPerformed(evt);
+        btn255.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn255MouseClicked(evt);
             }
         });
         jPanel5.add(btn255);
@@ -4325,9 +4057,9 @@ public class MineApp extends javax.swing.JFrame {
         btn256.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn256.setMaximumSize(new java.awt.Dimension(20, 20));
         btn256.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn256.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn256ActionPerformed(evt);
+        btn256.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn256MouseClicked(evt);
             }
         });
         jPanel5.add(btn256);
@@ -4337,9 +4069,9 @@ public class MineApp extends javax.swing.JFrame {
         btn257.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn257.setMaximumSize(new java.awt.Dimension(20, 20));
         btn257.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn257.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn257ActionPerformed(evt);
+        btn257.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn257MouseClicked(evt);
             }
         });
         jPanel5.add(btn257);
@@ -4349,9 +4081,9 @@ public class MineApp extends javax.swing.JFrame {
         btn258.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn258.setMaximumSize(new java.awt.Dimension(20, 20));
         btn258.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn258.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn258ActionPerformed(evt);
+        btn258.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn258MouseClicked(evt);
             }
         });
         jPanel5.add(btn258);
@@ -4361,9 +4093,9 @@ public class MineApp extends javax.swing.JFrame {
         btn259.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn259.setMaximumSize(new java.awt.Dimension(20, 20));
         btn259.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn259.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn259ActionPerformed(evt);
+        btn259.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn259MouseClicked(evt);
             }
         });
         jPanel5.add(btn259);
@@ -4373,9 +4105,9 @@ public class MineApp extends javax.swing.JFrame {
         btn260.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn260.setMaximumSize(new java.awt.Dimension(20, 20));
         btn260.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn260.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn260ActionPerformed(evt);
+        btn260.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn260MouseClicked(evt);
             }
         });
         jPanel5.add(btn260);
@@ -4385,9 +4117,9 @@ public class MineApp extends javax.swing.JFrame {
         btn261.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn261.setMaximumSize(new java.awt.Dimension(20, 20));
         btn261.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn261.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn261ActionPerformed(evt);
+        btn261.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn261MouseClicked(evt);
             }
         });
         jPanel5.add(btn261);
@@ -4397,9 +4129,9 @@ public class MineApp extends javax.swing.JFrame {
         btn262.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn262.setMaximumSize(new java.awt.Dimension(20, 20));
         btn262.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn262.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn262ActionPerformed(evt);
+        btn262.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn262MouseClicked(evt);
             }
         });
         jPanel5.add(btn262);
@@ -4409,9 +4141,9 @@ public class MineApp extends javax.swing.JFrame {
         btn263.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn263.setMaximumSize(new java.awt.Dimension(20, 20));
         btn263.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn263.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn263ActionPerformed(evt);
+        btn263.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn263MouseClicked(evt);
             }
         });
         jPanel5.add(btn263);
@@ -4421,9 +4153,9 @@ public class MineApp extends javax.swing.JFrame {
         btn264.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn264.setMaximumSize(new java.awt.Dimension(20, 20));
         btn264.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn264.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn264ActionPerformed(evt);
+        btn264.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn264MouseClicked(evt);
             }
         });
         jPanel5.add(btn264);
@@ -4433,9 +4165,9 @@ public class MineApp extends javax.swing.JFrame {
         btn265.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn265.setMaximumSize(new java.awt.Dimension(20, 20));
         btn265.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn265.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn265ActionPerformed(evt);
+        btn265.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn265MouseClicked(evt);
             }
         });
         jPanel5.add(btn265);
@@ -4445,9 +4177,9 @@ public class MineApp extends javax.swing.JFrame {
         btn266.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn266.setMaximumSize(new java.awt.Dimension(20, 20));
         btn266.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn266.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn266ActionPerformed(evt);
+        btn266.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn266MouseClicked(evt);
             }
         });
         jPanel5.add(btn266);
@@ -4457,9 +4189,9 @@ public class MineApp extends javax.swing.JFrame {
         btn267.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn267.setMaximumSize(new java.awt.Dimension(20, 20));
         btn267.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn267.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn267ActionPerformed(evt);
+        btn267.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn267MouseClicked(evt);
             }
         });
         jPanel5.add(btn267);
@@ -4469,9 +4201,9 @@ public class MineApp extends javax.swing.JFrame {
         btn268.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn268.setMaximumSize(new java.awt.Dimension(20, 20));
         btn268.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn268.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn268ActionPerformed(evt);
+        btn268.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn268MouseClicked(evt);
             }
         });
         jPanel5.add(btn268);
@@ -4481,9 +4213,9 @@ public class MineApp extends javax.swing.JFrame {
         btn269.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn269.setMaximumSize(new java.awt.Dimension(20, 20));
         btn269.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn269.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn269ActionPerformed(evt);
+        btn269.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn269MouseClicked(evt);
             }
         });
         jPanel5.add(btn269);
@@ -4493,9 +4225,9 @@ public class MineApp extends javax.swing.JFrame {
         btn270.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn270.setMaximumSize(new java.awt.Dimension(20, 20));
         btn270.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn270.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn270ActionPerformed(evt);
+        btn270.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn270MouseClicked(evt);
             }
         });
         jPanel5.add(btn270);
@@ -4505,9 +4237,9 @@ public class MineApp extends javax.swing.JFrame {
         btn271.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn271.setMaximumSize(new java.awt.Dimension(20, 20));
         btn271.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn271.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn271ActionPerformed(evt);
+        btn271.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn271MouseClicked(evt);
             }
         });
         jPanel5.add(btn271);
@@ -4517,9 +4249,9 @@ public class MineApp extends javax.swing.JFrame {
         btn272.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn272.setMaximumSize(new java.awt.Dimension(20, 20));
         btn272.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn272.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn272ActionPerformed(evt);
+        btn272.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn272MouseClicked(evt);
             }
         });
         jPanel5.add(btn272);
@@ -4529,9 +4261,9 @@ public class MineApp extends javax.swing.JFrame {
         btn273.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn273.setMaximumSize(new java.awt.Dimension(20, 20));
         btn273.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn273.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn273ActionPerformed(evt);
+        btn273.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn273MouseClicked(evt);
             }
         });
         jPanel5.add(btn273);
@@ -4541,9 +4273,9 @@ public class MineApp extends javax.swing.JFrame {
         btn274.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn274.setMaximumSize(new java.awt.Dimension(20, 20));
         btn274.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn274.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn274ActionPerformed(evt);
+        btn274.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn274MouseClicked(evt);
             }
         });
         jPanel5.add(btn274);
@@ -4553,9 +4285,9 @@ public class MineApp extends javax.swing.JFrame {
         btn275.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn275.setMaximumSize(new java.awt.Dimension(20, 20));
         btn275.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn275.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn275ActionPerformed(evt);
+        btn275.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn275MouseClicked(evt);
             }
         });
         jPanel5.add(btn275);
@@ -4565,9 +4297,9 @@ public class MineApp extends javax.swing.JFrame {
         btn276.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn276.setMaximumSize(new java.awt.Dimension(20, 20));
         btn276.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn276.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn276ActionPerformed(evt);
+        btn276.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn276MouseClicked(evt);
             }
         });
         jPanel5.add(btn276);
@@ -4577,9 +4309,9 @@ public class MineApp extends javax.swing.JFrame {
         btn277.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn277.setMaximumSize(new java.awt.Dimension(20, 20));
         btn277.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn277.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn277ActionPerformed(evt);
+        btn277.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn277MouseClicked(evt);
             }
         });
         jPanel5.add(btn277);
@@ -4589,9 +4321,9 @@ public class MineApp extends javax.swing.JFrame {
         btn278.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn278.setMaximumSize(new java.awt.Dimension(20, 20));
         btn278.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn278.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn278ActionPerformed(evt);
+        btn278.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn278MouseClicked(evt);
             }
         });
         jPanel5.add(btn278);
@@ -4601,9 +4333,9 @@ public class MineApp extends javax.swing.JFrame {
         btn279.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn279.setMaximumSize(new java.awt.Dimension(20, 20));
         btn279.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn279.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn279ActionPerformed(evt);
+        btn279.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn279MouseClicked(evt);
             }
         });
         jPanel5.add(btn279);
@@ -4613,9 +4345,9 @@ public class MineApp extends javax.swing.JFrame {
         btn280.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn280.setMaximumSize(new java.awt.Dimension(20, 20));
         btn280.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn280.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn280ActionPerformed(evt);
+        btn280.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn280MouseClicked(evt);
             }
         });
         jPanel5.add(btn280);
@@ -4625,9 +4357,9 @@ public class MineApp extends javax.swing.JFrame {
         btn281.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn281.setMaximumSize(new java.awt.Dimension(20, 20));
         btn281.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn281.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn281ActionPerformed(evt);
+        btn281.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn281MouseClicked(evt);
             }
         });
         jPanel5.add(btn281);
@@ -4637,9 +4369,9 @@ public class MineApp extends javax.swing.JFrame {
         btn282.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn282.setMaximumSize(new java.awt.Dimension(20, 20));
         btn282.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn282.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn282ActionPerformed(evt);
+        btn282.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn282MouseClicked(evt);
             }
         });
         jPanel5.add(btn282);
@@ -4649,9 +4381,9 @@ public class MineApp extends javax.swing.JFrame {
         btn283.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn283.setMaximumSize(new java.awt.Dimension(20, 20));
         btn283.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn283.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn283ActionPerformed(evt);
+        btn283.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn283MouseClicked(evt);
             }
         });
         jPanel5.add(btn283);
@@ -4661,9 +4393,9 @@ public class MineApp extends javax.swing.JFrame {
         btn284.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn284.setMaximumSize(new java.awt.Dimension(20, 20));
         btn284.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn284.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn284ActionPerformed(evt);
+        btn284.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn284MouseClicked(evt);
             }
         });
         jPanel5.add(btn284);
@@ -4673,9 +4405,9 @@ public class MineApp extends javax.swing.JFrame {
         btn285.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn285.setMaximumSize(new java.awt.Dimension(20, 20));
         btn285.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn285.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn285ActionPerformed(evt);
+        btn285.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn285MouseClicked(evt);
             }
         });
         jPanel5.add(btn285);
@@ -4685,9 +4417,9 @@ public class MineApp extends javax.swing.JFrame {
         btn286.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn286.setMaximumSize(new java.awt.Dimension(20, 20));
         btn286.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn286.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn286ActionPerformed(evt);
+        btn286.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn286MouseClicked(evt);
             }
         });
         jPanel5.add(btn286);
@@ -4697,9 +4429,9 @@ public class MineApp extends javax.swing.JFrame {
         btn287.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn287.setMaximumSize(new java.awt.Dimension(20, 20));
         btn287.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn287.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn287ActionPerformed(evt);
+        btn287.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn287MouseClicked(evt);
             }
         });
         jPanel5.add(btn287);
@@ -4709,9 +4441,9 @@ public class MineApp extends javax.swing.JFrame {
         btn288.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn288.setMaximumSize(new java.awt.Dimension(20, 20));
         btn288.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn288.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn288ActionPerformed(evt);
+        btn288.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn288MouseClicked(evt);
             }
         });
         jPanel5.add(btn288);
@@ -4721,9 +4453,9 @@ public class MineApp extends javax.swing.JFrame {
         btn289.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn289.setMaximumSize(new java.awt.Dimension(20, 20));
         btn289.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn289.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn289ActionPerformed(evt);
+        btn289.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn289MouseClicked(evt);
             }
         });
         jPanel5.add(btn289);
@@ -4733,9 +4465,9 @@ public class MineApp extends javax.swing.JFrame {
         btn290.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn290.setMaximumSize(new java.awt.Dimension(20, 20));
         btn290.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn290.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn290ActionPerformed(evt);
+        btn290.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn290MouseClicked(evt);
             }
         });
         jPanel5.add(btn290);
@@ -4745,9 +4477,9 @@ public class MineApp extends javax.swing.JFrame {
         btn291.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn291.setMaximumSize(new java.awt.Dimension(20, 20));
         btn291.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn291.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn291ActionPerformed(evt);
+        btn291.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn291MouseClicked(evt);
             }
         });
         jPanel5.add(btn291);
@@ -4757,9 +4489,9 @@ public class MineApp extends javax.swing.JFrame {
         btn292.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn292.setMaximumSize(new java.awt.Dimension(20, 20));
         btn292.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn292.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn292ActionPerformed(evt);
+        btn292.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn292MouseClicked(evt);
             }
         });
         jPanel5.add(btn292);
@@ -4769,9 +4501,9 @@ public class MineApp extends javax.swing.JFrame {
         btn293.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn293.setMaximumSize(new java.awt.Dimension(20, 20));
         btn293.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn293.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn293ActionPerformed(evt);
+        btn293.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn293MouseClicked(evt);
             }
         });
         jPanel5.add(btn293);
@@ -4781,9 +4513,9 @@ public class MineApp extends javax.swing.JFrame {
         btn294.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn294.setMaximumSize(new java.awt.Dimension(20, 20));
         btn294.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn294.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn294ActionPerformed(evt);
+        btn294.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn294MouseClicked(evt);
             }
         });
         jPanel5.add(btn294);
@@ -4793,9 +4525,9 @@ public class MineApp extends javax.swing.JFrame {
         btn295.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn295.setMaximumSize(new java.awt.Dimension(20, 20));
         btn295.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn295.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn295ActionPerformed(evt);
+        btn295.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn295MouseClicked(evt);
             }
         });
         jPanel5.add(btn295);
@@ -4805,9 +4537,9 @@ public class MineApp extends javax.swing.JFrame {
         btn296.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn296.setMaximumSize(new java.awt.Dimension(20, 20));
         btn296.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn296.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn296ActionPerformed(evt);
+        btn296.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn296MouseClicked(evt);
             }
         });
         jPanel5.add(btn296);
@@ -4817,9 +4549,9 @@ public class MineApp extends javax.swing.JFrame {
         btn297.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn297.setMaximumSize(new java.awt.Dimension(20, 20));
         btn297.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn297.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn297ActionPerformed(evt);
+        btn297.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn297MouseClicked(evt);
             }
         });
         jPanel5.add(btn297);
@@ -4829,9 +4561,9 @@ public class MineApp extends javax.swing.JFrame {
         btn298.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn298.setMaximumSize(new java.awt.Dimension(20, 20));
         btn298.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn298.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn298ActionPerformed(evt);
+        btn298.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn298MouseClicked(evt);
             }
         });
         jPanel5.add(btn298);
@@ -4841,9 +4573,9 @@ public class MineApp extends javax.swing.JFrame {
         btn299.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn299.setMaximumSize(new java.awt.Dimension(20, 20));
         btn299.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn299.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn299ActionPerformed(evt);
+        btn299.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn299MouseClicked(evt);
             }
         });
         jPanel5.add(btn299);
@@ -4853,9 +4585,9 @@ public class MineApp extends javax.swing.JFrame {
         btn300.setMargin(new java.awt.Insets(-10, -10, -10, -10));
         btn300.setMaximumSize(new java.awt.Dimension(20, 20));
         btn300.setPreferredSize(new java.awt.Dimension(20, 20));
-        btn300.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn300ActionPerformed(evt);
+        btn300.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                btn300MouseClicked(evt);
             }
         });
         jPanel5.add(btn300);
@@ -4865,5076 +4597,5406 @@ public class MineApp extends javax.swing.JFrame {
         pack();
     }// </editor-fold>//GEN-END:initComponents
 
-    private void btn105ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn105ActionPerformed
-        value = 105;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn105ActionPerformed
-
-    private void btn1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn1ActionPerformed
-        value = 1;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn1ActionPerformed
-
-    private void btn2ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn2ActionPerformed
-        value = 2;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn2ActionPerformed
-
-    private void btn3ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn3ActionPerformed
-        value = 3;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn3ActionPerformed
-
-    private void btn4ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn4ActionPerformed
-        value = 4;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn4ActionPerformed
-
-    private void btn5ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn5ActionPerformed
-        value = 5;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn5ActionPerformed
-
-    private void btn6ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn6ActionPerformed
-        value = 6;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn6ActionPerformed
-
-    private void btn7ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn7ActionPerformed
-        value = 7;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn7ActionPerformed
-
-    private void btn8ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn8ActionPerformed
-        value = 8;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn8ActionPerformed
-
-    private void btn9ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn9ActionPerformed
-        value = 9;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn9ActionPerformed
-
-    private void btn10ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn10ActionPerformed
-        value = 10;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn10ActionPerformed
-
-    private void btn11ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn11ActionPerformed
-        value = 11;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn11ActionPerformed
-
-    private void btn12ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn12ActionPerformed
-        value = 12;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn12ActionPerformed
-
-    private void btn13ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn13ActionPerformed
-        value = 13;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn13ActionPerformed
-
-    private void btn14ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn14ActionPerformed
-        value = 14;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn14ActionPerformed
-
-    private void btn15ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn15ActionPerformed
-        value = 15;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn15ActionPerformed
-
-    private void btn16ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn16ActionPerformed
-        value = 16;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn16ActionPerformed
-
-    private void btn17ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn17ActionPerformed
-        value = 17;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn17ActionPerformed
-
-    private void btn18ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn18ActionPerformed
-        value = 18;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn18ActionPerformed
-
-    private void btn19ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn19ActionPerformed
-        value = 19;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn19ActionPerformed
-
-    private void btn20ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn20ActionPerformed
-        value = 20;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn20ActionPerformed
-
-    private void btn21ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn21ActionPerformed
-        value = 21;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn21ActionPerformed
-
-    private void btn22ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn22ActionPerformed
-        value = 22;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn22ActionPerformed
-
-    private void btn23ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn23ActionPerformed
-        value = 23;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn23ActionPerformed
-
-    private void btn24ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn24ActionPerformed
-        value = 24;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn24ActionPerformed
-
-    private void btn25ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn25ActionPerformed
-        value = 25;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn25ActionPerformed
-
-    private void btn26ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn26ActionPerformed
-        value = 26;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn26ActionPerformed
-
-    private void btn27ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn27ActionPerformed
-        value = 27;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn27ActionPerformed
-
-    private void btn28ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn28ActionPerformed
-        value = 28;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn28ActionPerformed
-
-    private void btn29ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn29ActionPerformed
-        value = 29;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn29ActionPerformed
-
-    private void btn30ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn30ActionPerformed
-        value = 30;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn30ActionPerformed
-
-    private void btn31ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn31ActionPerformed
-        value = 31;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn31ActionPerformed
-
-    private void btn32ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn32ActionPerformed
-        value = 32;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn32ActionPerformed
-
-    private void btn33ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn33ActionPerformed
-        value = 33;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn33ActionPerformed
-
-    private void btn34ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn34ActionPerformed
-        value = 34;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn34ActionPerformed
-
-    private void btn35ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn35ActionPerformed
-        value = 35;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn35ActionPerformed
-
-    private void btn36ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn36ActionPerformed
-        value = 36;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn36ActionPerformed
-
-    private void btn37ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn37ActionPerformed
-        value = 37;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn37ActionPerformed
-
-    private void btn38ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn38ActionPerformed
-        value = 38;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn38ActionPerformed
-
-    private void btn39ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn39ActionPerformed
-        value = 39;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn39ActionPerformed
-
-    private void btn40ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn40ActionPerformed
-        value = 40;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn40ActionPerformed
-
-    private void btn41ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn41ActionPerformed
-        value = 41;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn41ActionPerformed
-
-    private void btn42ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn42ActionPerformed
-        value = 42;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn42ActionPerformed
-
-    private void btn43ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn43ActionPerformed
-        value = 43;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn43ActionPerformed
-
-    private void btn44ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn44ActionPerformed
-        value = 44;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn44ActionPerformed
-
-    private void btn45ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn45ActionPerformed
-        value = 45;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn45ActionPerformed
-
-    private void btn46ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn46ActionPerformed
-        value = 46;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn46ActionPerformed
-
-    private void btn47ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn47ActionPerformed
-        value = 47;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn47ActionPerformed
-
-    private void btn48ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn48ActionPerformed
-        value = 48;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn48ActionPerformed
-
-    private void btn49ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn49ActionPerformed
-        value = 49;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn49ActionPerformed
-
-    private void btn50ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn50ActionPerformed
-        value = 50;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn50ActionPerformed
-
-    private void btn71ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn71ActionPerformed
-        value = 71;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn71ActionPerformed
-
-    private void btn51ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn51ActionPerformed
-        value = 51;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn51ActionPerformed
-
-    private void btn52ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn52ActionPerformed
-        value = 52;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn52ActionPerformed
-
-    private void btn53ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn53ActionPerformed
-        value = 53;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn53ActionPerformed
-
-    private void btn54ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn54ActionPerformed
-        value = 54;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn54ActionPerformed
-
-    private void btn55ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn55ActionPerformed
-        value = 55;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn55ActionPerformed
-
-    private void btn56ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn56ActionPerformed
-        value = 56;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn56ActionPerformed
-
-    private void btn57ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn57ActionPerformed
-        value = 57;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn57ActionPerformed
-
-    private void btn58ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn58ActionPerformed
-        value = 58;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn58ActionPerformed
-
-    private void btn59ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn59ActionPerformed
-        value = 59;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn59ActionPerformed
-
-    private void btn60ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn60ActionPerformed
-        value = 60;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn60ActionPerformed
-
-    private void btn61ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn61ActionPerformed
-        value = 61;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn61ActionPerformed
-
-    private void btn62ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn62ActionPerformed
-        value = 62;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn62ActionPerformed
-
-    private void btn63ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn63ActionPerformed
-        value = 63;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn63ActionPerformed
-
-    private void btn64ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn64ActionPerformed
-        value = 64;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn64ActionPerformed
-
-    private void btn65ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn65ActionPerformed
-        value = 65;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn65ActionPerformed
-
-    private void btn66ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn66ActionPerformed
-        value = 66;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn66ActionPerformed
-
-    private void btn67ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn67ActionPerformed
-        value = 67;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn67ActionPerformed
-
-    private void btn68ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn68ActionPerformed
-        value = 68;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn68ActionPerformed
-
-    private void btn69ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn69ActionPerformed
-        value = 69;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn69ActionPerformed
-
-    private void btn70ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn70ActionPerformed
-        value = 70;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn70ActionPerformed
-
-    private void btn72ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn72ActionPerformed
-        value = 72;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn72ActionPerformed
-
-    private void btn73ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn73ActionPerformed
-        value = 73;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn73ActionPerformed
-
-    private void btn74ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn74ActionPerformed
-        value = 74;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn74ActionPerformed
-
-    private void btn75ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn75ActionPerformed
-        value = 75;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn75ActionPerformed
-
-    private void btn76ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn76ActionPerformed
-        value = 76;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn76ActionPerformed
-
-    private void btn77ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn77ActionPerformed
-        value = 77;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn77ActionPerformed
-
-    private void btn78ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn78ActionPerformed
-        value = 78;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn78ActionPerformed
-
-    private void btn79ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn79ActionPerformed
-        value = 79;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn79ActionPerformed
-
-    private void btn80ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn80ActionPerformed
-        value = 80;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn80ActionPerformed
-
-    private void btn81ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn81ActionPerformed
-        value = 81;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn81ActionPerformed
-
-    private void btn82ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn82ActionPerformed
-        value = 82;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn82ActionPerformed
-
-    private void btn83ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn83ActionPerformed
-        value = 83;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn83ActionPerformed
-
-    private void btn84ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn84ActionPerformed
-        value = 84;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn84ActionPerformed
-
-    private void btn85ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn85ActionPerformed
-        value = 85;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn85ActionPerformed
-
-    private void btn86ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn86ActionPerformed
-        value = 86;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn86ActionPerformed
-
-    private void btn87ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn87ActionPerformed
-        value = 87;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn87ActionPerformed
-
-    private void btn88ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn88ActionPerformed
-        value = 88;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn88ActionPerformed
-
-    private void btn89ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn89ActionPerformed
-        value = 89;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn89ActionPerformed
-
-    private void btn90ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn90ActionPerformed
-        value = 90;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn90ActionPerformed
-
-    private void btn91ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn91ActionPerformed
-        value = 91;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn91ActionPerformed
-
-    private void btn92ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn92ActionPerformed
-        value = 92;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn92ActionPerformed
-
-    private void btn93ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn93ActionPerformed
-        value = 93;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn93ActionPerformed
-
-    private void btn94ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn94ActionPerformed
-        value = 94;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn94ActionPerformed
-
-    private void btn95ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn95ActionPerformed
-        value = 95;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn95ActionPerformed
-
-    private void btn96ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn96ActionPerformed
-        value = 96;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn96ActionPerformed
-
-    private void btn97ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn97ActionPerformed
-        value = 97;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn97ActionPerformed
-
-    private void btn98ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn98ActionPerformed
-        value = 98;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn98ActionPerformed
-
-    private void btn99ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn99ActionPerformed
-        value = 99;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn99ActionPerformed
-
-    private void btn100ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn100ActionPerformed
-        value = 100;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn100ActionPerformed
-
-    private void btn120ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn120ActionPerformed
-        value = 120;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn120ActionPerformed
-
-    private void btn119ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn119ActionPerformed
-        value = 119;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn119ActionPerformed
-
-    private void btn118ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn118ActionPerformed
-        value = 118;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn118ActionPerformed
-
-    private void btn117ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn117ActionPerformed
-        value = 117;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn117ActionPerformed
-
-    private void btn116ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn116ActionPerformed
-        value = 116;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn116ActionPerformed
-
-    private void btn115ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn115ActionPerformed
-        value = 115;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn115ActionPerformed
-
-    private void btn114ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn114ActionPerformed
-        value = 114;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn114ActionPerformed
-
-    private void btn113ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn113ActionPerformed
-        value = 113;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn113ActionPerformed
-
-    private void btn112ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn112ActionPerformed
-        value = 112;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn112ActionPerformed
-
-    private void btn111ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn111ActionPerformed
-        value = 111;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn111ActionPerformed
-
-    private void btn110ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn110ActionPerformed
-        value = 110;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn110ActionPerformed
-
-    private void btn109ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn109ActionPerformed
-        value = 109;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn109ActionPerformed
-
-    private void btn108ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn108ActionPerformed
-        value = 108;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn108ActionPerformed
-
-    private void btn107ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn107ActionPerformed
-        value = 107;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn107ActionPerformed
-
-    private void btn106ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn106ActionPerformed
-        value = 106;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn106ActionPerformed
-
-    private void btn104ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn104ActionPerformed
-        value = 104;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn104ActionPerformed
-
-    private void btn103ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn103ActionPerformed
-        value = 103;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn103ActionPerformed
-
-    private void btn102ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn102ActionPerformed
-        value = 102;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn102ActionPerformed
-
-    private void btn101ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn101ActionPerformed
-        value = 101;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn101ActionPerformed
-
-    private void btn121ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn121ActionPerformed
-        value = 121;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn121ActionPerformed
-
-    private void btn122ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn122ActionPerformed
-        value = 122;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn122ActionPerformed
-
-    private void btn123ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn123ActionPerformed
-        value = 123;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn123ActionPerformed
-
-    private void btn124ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn124ActionPerformed
-        value = 124;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn124ActionPerformed
-
-    private void btn125ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn125ActionPerformed
-        value = 125;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn125ActionPerformed
-
-    private void btn126ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn126ActionPerformed
-        value = 126;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn126ActionPerformed
-
-    private void btn127ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn127ActionPerformed
-        value = 127;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn127ActionPerformed
-
-    private void btn128ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn128ActionPerformed
-        value = 128;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn128ActionPerformed
-
-    private void btn129ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn129ActionPerformed
-        value = 129;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn129ActionPerformed
-
-    private void btn130ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn130ActionPerformed
-        value = 130;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn130ActionPerformed
-
-    private void btn131ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn131ActionPerformed
-        value = 131;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn131ActionPerformed
-
-    private void btn132ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn132ActionPerformed
-        value = 132;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn132ActionPerformed
-
-    private void btn133ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn133ActionPerformed
-        value = 133;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn133ActionPerformed
-
-    private void btn134ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn134ActionPerformed
-        value = 134;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn134ActionPerformed
-
-    private void btn135ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn135ActionPerformed
-        value = 135;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn135ActionPerformed
-
-    private void btn136ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn136ActionPerformed
-        value = 136;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn136ActionPerformed
-
-    private void btn137ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn137ActionPerformed
-        value = 137;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn137ActionPerformed
-
-    private void btn138ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn138ActionPerformed
-        value = 138;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn138ActionPerformed
-
-    private void btn139ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn139ActionPerformed
-        value = 139;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn139ActionPerformed
-
-    private void btn140ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn140ActionPerformed
-        value = 140;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn140ActionPerformed
-
-    private void btn180ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn180ActionPerformed
-        value = 180;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn180ActionPerformed
-
-    private void btn160ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn160ActionPerformed
-        value = 160;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn160ActionPerformed
-
-    private void btn159ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn159ActionPerformed
-        value = 159;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn159ActionPerformed
-
-    private void btn158ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn158ActionPerformed
-        value = 158;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn158ActionPerformed
-
-    private void btn157ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn157ActionPerformed
-        value = 157;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn157ActionPerformed
-
-    private void btn156ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn156ActionPerformed
-        value = 156;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn156ActionPerformed
-
-    private void btn155ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn155ActionPerformed
-        value = 155;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn155ActionPerformed
-
-    private void btn154ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn154ActionPerformed
-        value = 154;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn154ActionPerformed
-
-    private void btn153ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn153ActionPerformed
-        value = 153;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn153ActionPerformed
-
-    private void btn152ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn152ActionPerformed
-        value = 152;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn152ActionPerformed
-
-    private void btn151ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn151ActionPerformed
-        value = 151;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn151ActionPerformed
-
-    private void btn150ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn150ActionPerformed
-        value = 150;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn150ActionPerformed
-
-    private void btn149ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn149ActionPerformed
-        value = 149;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn149ActionPerformed
-
-    private void btn148ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn148ActionPerformed
-        value = 148;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn148ActionPerformed
-
-    private void btn147ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn147ActionPerformed
-        value = 147;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn147ActionPerformed
-
-    private void btn146ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn146ActionPerformed
-        value = 146;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn146ActionPerformed
-
-    private void btn145ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn145ActionPerformed
-        value = 145;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn145ActionPerformed
-
-    private void btn144ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn144ActionPerformed
-        value = 144;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn144ActionPerformed
-
-    private void btn143ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn143ActionPerformed
-        value = 143;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn143ActionPerformed
-
-    private void btn142ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn142ActionPerformed
-        value = 142;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn142ActionPerformed
-
-    private void btn141ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn141ActionPerformed
-        value = 141;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn141ActionPerformed
-
-    private void btn161ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn161ActionPerformed
-        value = 161;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn161ActionPerformed
-
-    private void btn162ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn162ActionPerformed
-        value = 162;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn162ActionPerformed
-
-    private void btn163ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn163ActionPerformed
-        value = 163;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn163ActionPerformed
-
-    private void btn164ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn164ActionPerformed
-        value = 164;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn164ActionPerformed
-
-    private void btn165ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn165ActionPerformed
-        value = 165;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn165ActionPerformed
-
-    private void btn166ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn166ActionPerformed
-        value = 166;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn166ActionPerformed
-
-    private void btn167ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn167ActionPerformed
-        value = 167;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn167ActionPerformed
-
-    private void btn168ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn168ActionPerformed
-        value = 168;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn168ActionPerformed
-
-    private void btn169ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn169ActionPerformed
-        value = 169;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn169ActionPerformed
-
-    private void btn170ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn170ActionPerformed
-        value = 170;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn170ActionPerformed
-
-    private void btn171ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn171ActionPerformed
-        value = 171;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn171ActionPerformed
-
-    private void btn172ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn172ActionPerformed
-        value = 172;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn172ActionPerformed
-
-    private void btn173ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn173ActionPerformed
-        value = 173;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn173ActionPerformed
-
-    private void btn174ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn174ActionPerformed
-        value = 174;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn174ActionPerformed
-
-    private void btn175ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn175ActionPerformed
-        value = 175;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn175ActionPerformed
-
-    private void btn176ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn176ActionPerformed
-        value = 176;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn176ActionPerformed
-
-    private void btn177ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn177ActionPerformed
-        value = 177;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn177ActionPerformed
-
-    private void btn178ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn178ActionPerformed
-        value = 178;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn178ActionPerformed
-
-    private void btn179ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn179ActionPerformed
-        value = 179;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn179ActionPerformed
-
-    private void btn200ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn200ActionPerformed
-        value = 200;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn200ActionPerformed
-
-    private void btn199ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn199ActionPerformed
-        value = 199;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn199ActionPerformed
-
-    private void btn198ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn198ActionPerformed
-        value = 198;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn198ActionPerformed
-
-    private void btn197ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn197ActionPerformed
-        value = 197;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn197ActionPerformed
-
-    private void btn196ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn196ActionPerformed
-        value = 196;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn196ActionPerformed
-
-    private void btn195ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn195ActionPerformed
-        value = 195;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn195ActionPerformed
-
-    private void btn194ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn194ActionPerformed
-        value = 194;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn194ActionPerformed
-
-    private void btn193ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn193ActionPerformed
-        value = 193;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn193ActionPerformed
-
-    private void btn192ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn192ActionPerformed
-        value = 192;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn192ActionPerformed
-
-    private void btn191ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn191ActionPerformed
-        value = 191;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn191ActionPerformed
-
-    private void btn190ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn190ActionPerformed
-        value = 190;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn190ActionPerformed
-
-    private void btn189ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn189ActionPerformed
-        value = 189;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn189ActionPerformed
-
-    private void btn188ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn188ActionPerformed
-        value = 188;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn188ActionPerformed
-
-    private void btn187ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn187ActionPerformed
-        value = 187;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn187ActionPerformed
-
-    private void btn186ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn186ActionPerformed
-        value = 186;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn186ActionPerformed
-
-    private void btn185ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn185ActionPerformed
-        value = 185;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn185ActionPerformed
-
-    private void btn184ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn184ActionPerformed
-        value = 184;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn184ActionPerformed
-
-    private void btn183ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn183ActionPerformed
-        value = 183;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn183ActionPerformed
-
-    private void btn182ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn182ActionPerformed
-        value = 182;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn182ActionPerformed
-
-    private void btn181ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn181ActionPerformed
-        value = 181;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn181ActionPerformed
-
-    private void btn201ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn201ActionPerformed
-        value = 201;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn201ActionPerformed
-
-    private void btn202ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn202ActionPerformed
-        value = 202;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn202ActionPerformed
-
-    private void btn203ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn203ActionPerformed
-        value = 203;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn203ActionPerformed
-
-    private void btn204ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn204ActionPerformed
-        value = 204;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn204ActionPerformed
-
-    private void btn205ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn205ActionPerformed
-        value = 205;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn205ActionPerformed
-
-    private void btn206ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn206ActionPerformed
-        value = 206;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn206ActionPerformed
-
-    private void btn207ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn207ActionPerformed
-        value = 207;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn207ActionPerformed
-
-    private void btn208ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn208ActionPerformed
-        value = 208;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn208ActionPerformed
-
-    private void btn209ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn209ActionPerformed
-        value = 209;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn209ActionPerformed
-
-    private void btn210ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn210ActionPerformed
-        value = 210;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn210ActionPerformed
-
-    private void btn211ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn211ActionPerformed
-        value = 211;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn211ActionPerformed
-
-    private void btn212ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn212ActionPerformed
-        value = 212;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn212ActionPerformed
-
-    private void btn213ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn213ActionPerformed
-        value = 213;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn213ActionPerformed
-
-    private void btn214ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn214ActionPerformed
-        value = 214;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn214ActionPerformed
-
-    private void btn215ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn215ActionPerformed
-        value = 215;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn215ActionPerformed
-
-    private void btn216ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn216ActionPerformed
-        value = 216;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn216ActionPerformed
-
-    private void btn217ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn217ActionPerformed
-        value = 217;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn217ActionPerformed
-
-    private void btn218ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn218ActionPerformed
-        value = 218;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn218ActionPerformed
-
-    private void btn219ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn219ActionPerformed
-        value = 219;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn219ActionPerformed
-
-    private void btn220ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn220ActionPerformed
-        value = 220;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn220ActionPerformed
-
-    private void btn221ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn221ActionPerformed
-        value = 221;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn221ActionPerformed
-
-    private void btn222ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn222ActionPerformed
-        value = 222;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn222ActionPerformed
-
-    private void btn223ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn223ActionPerformed
-        value = 223;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn223ActionPerformed
-
-    private void btn224ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn224ActionPerformed
-        value = 224;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn224ActionPerformed
-
-    private void btn225ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn225ActionPerformed
-        value = 225;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn225ActionPerformed
-
-    private void btn226ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn226ActionPerformed
-        value = 226;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn226ActionPerformed
-
-    private void btn227ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn227ActionPerformed
-        value = 227;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn227ActionPerformed
-
-    private void btn228ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn228ActionPerformed
-        value = 228;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn228ActionPerformed
-
-    private void btn229ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn229ActionPerformed
-        value = 229;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn229ActionPerformed
-
-    private void btn230ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn230ActionPerformed
-        value = 230;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn230ActionPerformed
-
-    private void btn231ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn231ActionPerformed
-        value = 231;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn231ActionPerformed
-
-    private void btn232ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn232ActionPerformed
-        value = 232;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn232ActionPerformed
-
-    private void btn233ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn233ActionPerformed
-        value = 233;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn233ActionPerformed
-
-    private void btn234ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn234ActionPerformed
-        value = 234;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn234ActionPerformed
-
-    private void btn235ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn235ActionPerformed
-        value = 235;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn235ActionPerformed
-
-    private void btn236ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn236ActionPerformed
-        value = 236;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn236ActionPerformed
-
-    private void btn237ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn237ActionPerformed
-        value = 237;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn237ActionPerformed
-
-    private void btn238ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn238ActionPerformed
-        value = 238;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn238ActionPerformed
-
-    private void btn239ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn239ActionPerformed
-        value = 239;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn239ActionPerformed
-
-    private void btn240ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn240ActionPerformed
-        value = 240;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn240ActionPerformed
-
-    private void btn241ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn241ActionPerformed
-        value = 241;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn241ActionPerformed
-
-    private void btn242ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn242ActionPerformed
-        value = 242;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn242ActionPerformed
-
-    private void btn243ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn243ActionPerformed
-        value = 243;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn243ActionPerformed
-
-    private void btn244ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn244ActionPerformed
-        value = 244;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn244ActionPerformed
-
-    private void btn245ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn245ActionPerformed
-        value = 245;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn245ActionPerformed
-
-    private void btn246ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn246ActionPerformed
-        value = 246;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn246ActionPerformed
-
-    private void btn247ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn247ActionPerformed
-        value = 247;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn247ActionPerformed
-
-    private void btn248ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn248ActionPerformed
-        value = 248;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn248ActionPerformed
-
-    private void btn249ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn249ActionPerformed
-        value = 249;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn249ActionPerformed
-
-    private void btn250ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn250ActionPerformed
-        value = 250;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn250ActionPerformed
-
-    private void btn251ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn251ActionPerformed
-        value = 251;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn251ActionPerformed
-
-    private void btn252ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn252ActionPerformed
-        value = 252;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn252ActionPerformed
-
-    private void btn253ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn253ActionPerformed
-        value = 253;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn253ActionPerformed
-
-    private void btn254ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn254ActionPerformed
-        value = 254;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn254ActionPerformed
-
-    private void btn255ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn255ActionPerformed
-        value = 255;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn255ActionPerformed
-
-    private void btn256ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn256ActionPerformed
-        value = 256;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn256ActionPerformed
-
-    private void btn257ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn257ActionPerformed
-        value = 257;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn257ActionPerformed
-
-    private void btn258ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn258ActionPerformed
-        value = 258;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn258ActionPerformed
-
-    private void btn259ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn259ActionPerformed
-        value = 259;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn259ActionPerformed
-
-    private void btn260ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn260ActionPerformed
-        value = 260;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn260ActionPerformed
-
-    private void btn261ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn261ActionPerformed
-        value = 261;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn261ActionPerformed
-
-    private void btn262ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn262ActionPerformed
-        value = 262;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn262ActionPerformed
-
-    private void btn263ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn263ActionPerformed
-        value = 263;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn263ActionPerformed
-
-    private void btn264ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn264ActionPerformed
-        value = 264;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn264ActionPerformed
-
-    private void btn265ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn265ActionPerformed
-        value = 265;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn265ActionPerformed
-
-    private void btn266ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn266ActionPerformed
-        value = 266;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn266ActionPerformed
-
-    private void btn267ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn267ActionPerformed
-        value = 267;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn267ActionPerformed
-
-    private void btn268ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn268ActionPerformed
-        value = 268;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn268ActionPerformed
-
-    private void btn269ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn269ActionPerformed
-        value = 269;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn269ActionPerformed
-
-    private void btn270ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn270ActionPerformed
-        value = 270;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn270ActionPerformed
-
-    private void btn271ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn271ActionPerformed
-        value = 271;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn271ActionPerformed
-
-    private void btn272ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn272ActionPerformed
-        value = 272;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn272ActionPerformed
-
-    private void btn273ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn273ActionPerformed
-        value = 273;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn273ActionPerformed
-
-    private void btn274ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn274ActionPerformed
-        value = 274;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn274ActionPerformed
-
-    private void btn275ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn275ActionPerformed
-        value = 275;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn275ActionPerformed
-
-    private void btn276ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn276ActionPerformed
-        value = 276;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn276ActionPerformed
-
-    private void btn277ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn277ActionPerformed
-        value = 277;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn277ActionPerformed
-
-    private void btn278ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn278ActionPerformed
-        value = 278;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn278ActionPerformed
-
-    private void btn279ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn279ActionPerformed
-        value = 279;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn279ActionPerformed
-
-    private void btn280ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn280ActionPerformed
-        value = 280;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn280ActionPerformed
-
-    private void btn281ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn281ActionPerformed
-        value = 281;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn281ActionPerformed
-
-    private void btn282ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn282ActionPerformed
-        value = 282;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn282ActionPerformed
-
-    private void btn283ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn283ActionPerformed
-        value = 283;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn283ActionPerformed
-
-    private void btn284ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn284ActionPerformed
-        value = 284;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn284ActionPerformed
-
-    private void btn285ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn285ActionPerformed
-        value = 285;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn285ActionPerformed
-
-    private void btn286ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn286ActionPerformed
-        value = 286;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn286ActionPerformed
-
-    private void btn287ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn287ActionPerformed
-        value = 287;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn287ActionPerformed
-
-    private void btn288ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn288ActionPerformed
-        value = 288;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn288ActionPerformed
-
-    private void btn289ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn289ActionPerformed
-        value = 289;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn289ActionPerformed
-
-    private void btn290ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn290ActionPerformed
-        value = 290;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn290ActionPerformed
-
-    private void btn291ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn291ActionPerformed
-        value = 291;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn291ActionPerformed
-
-    private void btn292ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn292ActionPerformed
-        value = 292;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn292ActionPerformed
-
-    private void btn293ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn293ActionPerformed
-        value = 293;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn293ActionPerformed
-
-    private void btn294ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn294ActionPerformed
-        value = 294;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn294ActionPerformed
-
-    private void btn295ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn295ActionPerformed
-        value = 295;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn295ActionPerformed
-
-    private void btn296ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn296ActionPerformed
-        value = 296;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn296ActionPerformed
-
-    private void btn297ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn297ActionPerformed
-        value = 297;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn297ActionPerformed
-
-    private void btn298ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn298ActionPerformed
-        value = 298;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn298ActionPerformed
-
-    private void btn299ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn299ActionPerformed
-        value = 299;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn299ActionPerformed
-
-    private void btn300ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn300ActionPerformed
-        value = 300;
-        if (!buttonStatusList.get(value)) {
-            if (!mineGenerated) {
-                generateMineSlots(value);
-                manageSlot(value);
-
-            } else if (checkDuplicateSlot(value, mineList)) {
-                mineHit();
-            } else {
-                manageSlot(value);
-            }
-
-        }
-    }//GEN-LAST:event_btn300ActionPerformed
-
     private void btn1MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn1MouseClicked
-        // TODO add your handling code here:
-        if (evt.getButton() == 3) {
-            String text = btn1.getText(); 
-            if (text.equals("")) {
-                buttonStatusList.replace(1, true);
-                btn1.setForeground(Color.white);
-                btn1.setText("?");
-            } else if (text.equals("?")) {
-                buttonStatusList.replace(1, true);
-                btn1.setForeground(Color.red);
-                btn1.setText("B");
-            } else {
-                buttonStatusList.replace(1, false);
-                btn1.setText("");
+        value = 1;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
             }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
         }
+
     }//GEN-LAST:event_btn1MouseClicked
 
     private void btn2MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn2MouseClicked
-        // TODO add your handling code here:
+        value = 2;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
     }//GEN-LAST:event_btn2MouseClicked
 
     private void btn3MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn3MouseClicked
-        // TODO add your handling code here:
+        value = 3;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
     }//GEN-LAST:event_btn3MouseClicked
 
     private void btn4MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn4MouseClicked
-        // TODO add your handling code here:
+        value = 4;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
     }//GEN-LAST:event_btn4MouseClicked
 
     private void btn5MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn5MouseClicked
-        // TODO add your handling code here:
+        value = 5;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
     }//GEN-LAST:event_btn5MouseClicked
 
     private void btn6MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn6MouseClicked
-        // TODO add your handling code here:
+        value = 6;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
     }//GEN-LAST:event_btn6MouseClicked
 
     private void btn7MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn7MouseClicked
-        // TODO add your handling code here:
+        value = 7;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
     }//GEN-LAST:event_btn7MouseClicked
 
     private void btn8MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn8MouseClicked
-        // TODO add your handling code here:
+        value = 8;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
     }//GEN-LAST:event_btn8MouseClicked
 
     private void btn9MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn9MouseClicked
-        // TODO add your handling code here:
+        value = 9;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
     }//GEN-LAST:event_btn9MouseClicked
 
     private void btn10MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn10MouseClicked
-        // TODO add your handling code here:
+        value = 10;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
     }//GEN-LAST:event_btn10MouseClicked
 
     private void btn11MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn11MouseClicked
-        // TODO add your handling code here:
+        value = 11;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
     }//GEN-LAST:event_btn11MouseClicked
 
     private void btn12MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn12MouseClicked
-        // TODO add your handling code here:
+        value = 12;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
     }//GEN-LAST:event_btn12MouseClicked
 
     private void btn13MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn13MouseClicked
-        // TODO add your handling code here:
+        value = 13;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
     }//GEN-LAST:event_btn13MouseClicked
 
     private void btn14MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn14MouseClicked
-        // TODO add your handling code here:
+        value = 14;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
     }//GEN-LAST:event_btn14MouseClicked
 
     private void btn15MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn15MouseClicked
-        // TODO add your handling code here:
+        value = 15;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
     }//GEN-LAST:event_btn15MouseClicked
 
     private void btn16MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn16MouseClicked
-        // TODO add your handling code here:
+        value = 16;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
     }//GEN-LAST:event_btn16MouseClicked
 
     private void btn17MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn17MouseClicked
-        // TODO add your handling code here:
+        value = 17;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
     }//GEN-LAST:event_btn17MouseClicked
 
     private void btn18MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn18MouseClicked
-        // TODO add your handling code here:
+        value = 18;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
     }//GEN-LAST:event_btn18MouseClicked
 
     private void btn19MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn19MouseClicked
-        // TODO add your handling code here:
+        value = 19;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
     }//GEN-LAST:event_btn19MouseClicked
 
     private void btn20MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn20MouseClicked
-        // TODO add your handling code here:
+        value = 20;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
     }//GEN-LAST:event_btn20MouseClicked
 
     private void btn21MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn21MouseClicked
-        // TODO add your handling code here:
+        value = 21;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
     }//GEN-LAST:event_btn21MouseClicked
 
     private void btn22MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn22MouseClicked
-        // TODO add your handling code here:
+        value = 22;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
     }//GEN-LAST:event_btn22MouseClicked
 
     private void btn23MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn23MouseClicked
-        // TODO add your handling code here:
+        value = 23;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
     }//GEN-LAST:event_btn23MouseClicked
 
     private void btn24MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn24MouseClicked
-        // TODO add your handling code here:
+        value = 24;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
     }//GEN-LAST:event_btn24MouseClicked
 
     private void btn25MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn25MouseClicked
-        // TODO add your handling code here:
+        value = 25;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
     }//GEN-LAST:event_btn25MouseClicked
 
     private void btn26MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn26MouseClicked
-        // TODO add your handling code here:
+        value = 26;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
     }//GEN-LAST:event_btn26MouseClicked
 
     private void btn27MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn27MouseClicked
-        // TODO add your handling code here:
+        value = 27;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
     }//GEN-LAST:event_btn27MouseClicked
 
     private void btn28MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn28MouseClicked
-        // TODO add your handling code here:
+        value = 28;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
     }//GEN-LAST:event_btn28MouseClicked
 
     private void btn29MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn29MouseClicked
-        // TODO add your handling code here:
+        value = 29;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
     }//GEN-LAST:event_btn29MouseClicked
 
     private void btn30MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn30MouseClicked
-        // TODO add your handling code here:
+        value = 30;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
     }//GEN-LAST:event_btn30MouseClicked
 
     private void btn31MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn31MouseClicked
-        // TODO add your handling code here:
+        value = 31;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
     }//GEN-LAST:event_btn31MouseClicked
 
     private void btn32MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn32MouseClicked
-        // TODO add your handling code here:
+        value = 32;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
     }//GEN-LAST:event_btn32MouseClicked
 
     private void btn33MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn33MouseClicked
-        // TODO add your handling code here:
+        value = 33;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
     }//GEN-LAST:event_btn33MouseClicked
 
     private void btn34MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn34MouseClicked
-        // TODO add your handling code here:
+        value = 34;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
     }//GEN-LAST:event_btn34MouseClicked
 
     private void btn35MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn35MouseClicked
-        // TODO add your handling code here:
+        value = 35;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
     }//GEN-LAST:event_btn35MouseClicked
 
     private void btn36MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn36MouseClicked
-        // TODO add your handling code here:
+        value = 36;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
     }//GEN-LAST:event_btn36MouseClicked
 
     private void btn37MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn37MouseClicked
-        // TODO add your handling code here:
+        value = 37;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
     }//GEN-LAST:event_btn37MouseClicked
 
     private void btn38MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn38MouseClicked
-        // TODO add your handling code here:
+        value = 38;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
     }//GEN-LAST:event_btn38MouseClicked
 
     private void btn39MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn39MouseClicked
-        // TODO add your handling code here:
+        value = 39;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
     }//GEN-LAST:event_btn39MouseClicked
 
     private void btn40MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn40MouseClicked
-        // TODO add your handling code here:
+        value = 40;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
     }//GEN-LAST:event_btn40MouseClicked
 
     private void btn41MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn41MouseClicked
-        // TODO add your handling code here:
+        value = 41;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
     }//GEN-LAST:event_btn41MouseClicked
 
     private void btn42MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn42MouseClicked
-        // TODO add your handling code here:
+        value = 42;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
     }//GEN-LAST:event_btn42MouseClicked
 
     private void btn43MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn43MouseClicked
-        // TODO add your handling code here:
+        value = 43;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
     }//GEN-LAST:event_btn43MouseClicked
 
     private void btn44MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn44MouseClicked
-        // TODO add your handling code here:
+        value = 44;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
     }//GEN-LAST:event_btn44MouseClicked
 
     private void btn45MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn45MouseClicked
-        // TODO add your handling code here:
+        value = 45;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
     }//GEN-LAST:event_btn45MouseClicked
 
     private void btn46MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn46MouseClicked
-        // TODO add your handling code here:
+        value = 46;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
     }//GEN-LAST:event_btn46MouseClicked
 
     private void btn47MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn47MouseClicked
-        // TODO add your handling code here:
+        value = 47;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
     }//GEN-LAST:event_btn47MouseClicked
 
     private void btn48MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn48MouseClicked
-        // TODO add your handling code here:
+        value = 48;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
     }//GEN-LAST:event_btn48MouseClicked
 
     private void btn49MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn49MouseClicked
-        // TODO add your handling code here:
+        value = 49;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
     }//GEN-LAST:event_btn49MouseClicked
 
     private void btn50MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn50MouseClicked
-        // TODO add your handling code here:
+        value = 50;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
     }//GEN-LAST:event_btn50MouseClicked
 
     private void btn51MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn51MouseClicked
-        // TODO add your handling code here:
+        value = 51;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
     }//GEN-LAST:event_btn51MouseClicked
 
     private void btn52MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn52MouseClicked
-        // TODO add your handling code here:
+        value = 52;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
     }//GEN-LAST:event_btn52MouseClicked
 
     private void btn53MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn53MouseClicked
-        // TODO add your handling code here:
+        value = 53;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
     }//GEN-LAST:event_btn53MouseClicked
 
     private void btn54MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn54MouseClicked
-        // TODO add your handling code here:
+        value = 54;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
     }//GEN-LAST:event_btn54MouseClicked
 
     private void btn55MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn55MouseClicked
-        // TODO add your handling code here:
+        value = 55;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
     }//GEN-LAST:event_btn55MouseClicked
 
     private void btn56MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn56MouseClicked
-        // TODO add your handling code here:
+        value = 56;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
     }//GEN-LAST:event_btn56MouseClicked
 
     private void btn57MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn57MouseClicked
-        // TODO add your handling code here:
+        value = 57;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
     }//GEN-LAST:event_btn57MouseClicked
 
     private void btn58MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn58MouseClicked
-        // TODO add your handling code here:
+        value = 58;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
     }//GEN-LAST:event_btn58MouseClicked
 
     private void btn59MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn59MouseClicked
-        // TODO add your handling code here:
+        value = 59;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
     }//GEN-LAST:event_btn59MouseClicked
 
     private void btn60MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn60MouseClicked
-        // TODO add your handling code here:
+        value = 60;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
     }//GEN-LAST:event_btn60MouseClicked
 
     private void btn61MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn61MouseClicked
-        // TODO add your handling code here:
+        value = 61;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
     }//GEN-LAST:event_btn61MouseClicked
 
     private void btn62MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn62MouseClicked
-        // TODO add your handling code here:
+        value = 62;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
     }//GEN-LAST:event_btn62MouseClicked
 
     private void btn63MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn63MouseClicked
-        // TODO add your handling code here:
+        value = 63;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
     }//GEN-LAST:event_btn63MouseClicked
 
     private void btn64MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn64MouseClicked
-        // TODO add your handling code here:
+        value = 64;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
     }//GEN-LAST:event_btn64MouseClicked
+
+    private void btn65MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn65MouseClicked
+        value = 65;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn65MouseClicked
+
+    private void btn66MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn66MouseClicked
+        value = 66;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn66MouseClicked
+
+    private void btn67MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn67MouseClicked
+        value = 67;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn67MouseClicked
+
+    private void btn68MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn68MouseClicked
+        value = 68;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn68MouseClicked
+
+    private void btn69MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn69MouseClicked
+        value = 69;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn69MouseClicked
+
+    private void btn70MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn70MouseClicked
+        value = 70;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn70MouseClicked
+
+    private void btn71MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn71MouseClicked
+        value = 71;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn71MouseClicked
+
+    private void btn72MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn72MouseClicked
+        value = 72;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn72MouseClicked
+
+    private void btn73MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn73MouseClicked
+        value = 73;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn73MouseClicked
+
+    private void btn74MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn74MouseClicked
+        value = 74;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn74MouseClicked
+
+    private void btn75MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn75MouseClicked
+        value = 75;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn75MouseClicked
+
+    private void btn76MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn76MouseClicked
+        value = 76;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn76MouseClicked
+
+    private void btn77MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn77MouseClicked
+        value = 77;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn77MouseClicked
+
+    private void btn78MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn78MouseClicked
+        value = 78;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn78MouseClicked
+
+    private void btn79MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn79MouseClicked
+        value = 79;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn79MouseClicked
+
+    private void btn80MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn80MouseClicked
+        value = 80;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn80MouseClicked
+
+    private void btn81MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn81MouseClicked
+        value = 81;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn81MouseClicked
+
+    private void btn82MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn82MouseClicked
+        value = 82;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn82MouseClicked
+
+    private void btn83MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn83MouseClicked
+        value = 83;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn83MouseClicked
+
+    private void btn84MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn84MouseClicked
+        value = 84;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn84MouseClicked
+
+    private void btn85MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn85MouseClicked
+        value = 85;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn85MouseClicked
+
+    private void btn86MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn86MouseClicked
+        value = 86;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn86MouseClicked
+
+    private void btn87MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn87MouseClicked
+        value = 87;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn87MouseClicked
+
+    private void btn88MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn88MouseClicked
+        value = 88;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn88MouseClicked
+
+    private void btn89MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn89MouseClicked
+        value = 89;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn89MouseClicked
+
+    private void btn90MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn90MouseClicked
+        value = 90;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn90MouseClicked
+
+    private void btn91MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn91MouseClicked
+        value = 91;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn91MouseClicked
+
+    private void btn92MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn92MouseClicked
+        value = 92;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn92MouseClicked
+
+    private void btn93MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn93MouseClicked
+        value = 93;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn93MouseClicked
+
+    private void btn94MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn94MouseClicked
+        value = 94;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn94MouseClicked
+
+    private void btn95MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn95MouseClicked
+        value = 95;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn95MouseClicked
+
+    private void btn96MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn96MouseClicked
+        value = 96;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn96MouseClicked
+
+    private void btn97MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn97MouseClicked
+        value = 97;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn97MouseClicked
+
+    private void btn98MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn98MouseClicked
+        value = 98;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn98MouseClicked
+
+    private void btn99MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn99MouseClicked
+        value = 99;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn99MouseClicked
+
+    private void btn100MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn100MouseClicked
+        value = 100;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn100MouseClicked
+
+    private void btn101MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn101MouseClicked
+        value = 101;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn101MouseClicked
+
+    private void btn102MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn102MouseClicked
+        value = 102;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn102MouseClicked
+
+    private void btn103MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn103MouseClicked
+        value = 103;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn103MouseClicked
+
+    private void btn104MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn104MouseClicked
+        value = 104;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn104MouseClicked
+
+    private void btn105MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn105MouseClicked
+        value = 105;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn105MouseClicked
+
+    private void btn106MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn106MouseClicked
+        value = 106;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn106MouseClicked
+
+    private void btn107MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn107MouseClicked
+        value = 107;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn107MouseClicked
+
+    private void btn108MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn108MouseClicked
+        value = 108;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn108MouseClicked
+
+    private void btn109MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn109MouseClicked
+        value = 109;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn109MouseClicked
+
+    private void btn110MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn110MouseClicked
+        value = 110;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn110MouseClicked
+
+    private void btn111MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn111MouseClicked
+        value = 111;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn111MouseClicked
+
+    private void btn112MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn112MouseClicked
+        value = 112;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn112MouseClicked
+
+    private void btn113MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn113MouseClicked
+        value = 113;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn113MouseClicked
+
+    private void btn114MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn114MouseClicked
+        value = 114;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn114MouseClicked
+
+    private void btn115MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn115MouseClicked
+        value = 115;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn115MouseClicked
+
+    private void btn116MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn116MouseClicked
+        value = 116;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn116MouseClicked
+
+    private void btn117MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn117MouseClicked
+        value = 117;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn117MouseClicked
+
+    private void btn118MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn118MouseClicked
+        value = 118;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn118MouseClicked
+
+    private void btn119MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn119MouseClicked
+        value = 119;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn119MouseClicked
+
+    private void btn120MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn120MouseClicked
+        value = 120;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn120MouseClicked
+
+    private void btn121MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn121MouseClicked
+        value = 121;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn121MouseClicked
+
+    private void btn122MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn122MouseClicked
+        value = 122;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn122MouseClicked
+
+    private void btn123MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn123MouseClicked
+        value = 123;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn123MouseClicked
+
+    private void btn124MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn124MouseClicked
+        value = 124;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn124MouseClicked
+
+    private void btn125MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn125MouseClicked
+        value = 125;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn125MouseClicked
+
+    private void btn126MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn126MouseClicked
+        value = 126;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn126MouseClicked
+
+    private void btn127MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn127MouseClicked
+        value = 127;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn127MouseClicked
+
+    private void btn128MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn128MouseClicked
+        value = 128;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn128MouseClicked
+
+    private void btn129MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn129MouseClicked
+        value = 129;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn129MouseClicked
+
+    private void btn130MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn130MouseClicked
+        value = 130;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn130MouseClicked
+
+    private void btn131MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn131MouseClicked
+        value = 131;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn131MouseClicked
+
+    private void btn132MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn132MouseClicked
+        value = 132;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn132MouseClicked
+
+    private void btn133MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn133MouseClicked
+        value = 133;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn133MouseClicked
+
+    private void btn134MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn134MouseClicked
+        value = 134;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn134MouseClicked
+
+    private void btn135MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn135MouseClicked
+        value = 135;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn135MouseClicked
+
+    private void btn136MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn136MouseClicked
+        value = 136;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn136MouseClicked
+
+    private void btn137MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn137MouseClicked
+        value = 137;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn137MouseClicked
+
+    private void btn138MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn138MouseClicked
+        value = 138;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn138MouseClicked
+
+    private void btn139MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn139MouseClicked
+        value = 139;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn139MouseClicked
+
+    private void btn140MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn140MouseClicked
+        value = 140;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn140MouseClicked
+
+    private void btn141MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn141MouseClicked
+        value = 141;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn141MouseClicked
+
+    private void btn142MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn142MouseClicked
+        value = 142;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn142MouseClicked
+
+    private void btn144MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn144MouseClicked
+        value = 144;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn144MouseClicked
+
+    private void btn143MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn143MouseClicked
+        value = 143;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn143MouseClicked
+
+    private void btn145MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn145MouseClicked
+        value = 145;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn145MouseClicked
+
+    private void btn146MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn146MouseClicked
+        value = 146;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn146MouseClicked
+
+    private void btn147MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn147MouseClicked
+        value = 147;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn147MouseClicked
+
+    private void btn148MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn148MouseClicked
+        value = 148;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn148MouseClicked
+
+    private void btn149MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn149MouseClicked
+        value = 149;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn149MouseClicked
+
+    private void btn150MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn150MouseClicked
+        value = 150;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn150MouseClicked
+
+    private void btn151MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn151MouseClicked
+        value = 151;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn151MouseClicked
+
+    private void btn152MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn152MouseClicked
+        value = 152;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn152MouseClicked
+
+    private void btn153MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn153MouseClicked
+        value = 153;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn153MouseClicked
+
+    private void btn154MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn154MouseClicked
+        value = 154;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn154MouseClicked
+
+    private void btn155MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn155MouseClicked
+        value = 155;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn155MouseClicked
+
+    private void btn156MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn156MouseClicked
+        value = 156;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn156MouseClicked
+
+    private void btn157MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn157MouseClicked
+        value = 157;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn157MouseClicked
+
+    private void btn158MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn158MouseClicked
+        value = 158;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn158MouseClicked
+
+    private void btn159MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn159MouseClicked
+        value = 159;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn159MouseClicked
+
+    private void btn160MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn160MouseClicked
+        value = 160;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn160MouseClicked
+
+    private void btn161MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn161MouseClicked
+        value = 161;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn161MouseClicked
+
+    private void btn162MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn162MouseClicked
+        value = 162;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn162MouseClicked
+
+    private void btn163MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn163MouseClicked
+        value = 163;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn163MouseClicked
+
+    private void btn164MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn164MouseClicked
+        value = 164;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn164MouseClicked
+
+    private void btn165MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn165MouseClicked
+        value = 165;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn165MouseClicked
+
+    private void btn166MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn166MouseClicked
+        value = 166;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn166MouseClicked
+
+    private void btn167MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn167MouseClicked
+        value = 167;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn167MouseClicked
+
+    private void btn168MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn168MouseClicked
+        value = 168;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn168MouseClicked
+
+    private void btn169MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn169MouseClicked
+        value = 169;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn169MouseClicked
+
+    private void btn170MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn170MouseClicked
+        value = 170;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn170MouseClicked
+
+    private void btn171MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn171MouseClicked
+        value = 171;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn171MouseClicked
+
+    private void btn172MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn172MouseClicked
+        value = 172;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn172MouseClicked
+
+    private void btn173MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn173MouseClicked
+        value = 173;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn173MouseClicked
+
+    private void btn174MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn174MouseClicked
+        value = 174;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn174MouseClicked
+
+    private void btn175MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn175MouseClicked
+        value = 175;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn175MouseClicked
+
+    private void btn176MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn176MouseClicked
+        value = 176;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn176MouseClicked
+
+    private void btn177MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn177MouseClicked
+        value = 177;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn177MouseClicked
+
+    private void btn178MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn178MouseClicked
+        value = 178;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn178MouseClicked
+
+    private void btn179MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn179MouseClicked
+        value = 179;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn179MouseClicked
+
+    private void btn180MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn180MouseClicked
+        value = 180;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn180MouseClicked
+
+    private void btn181MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn181MouseClicked
+        value = 181;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn181MouseClicked
+
+    private void btn182MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn182MouseClicked
+        value = 182;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn182MouseClicked
+
+    private void btn183MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn183MouseClicked
+        value = 183;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn183MouseClicked
+
+    private void btn184MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn184MouseClicked
+        value = 184;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn184MouseClicked
+
+    private void btn185MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn185MouseClicked
+        value = 185;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn185MouseClicked
+
+    private void btn186MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn186MouseClicked
+        value = 186;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn186MouseClicked
+
+    private void btn187MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn187MouseClicked
+        value = 187;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn187MouseClicked
+
+    private void btn188MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn188MouseClicked
+        value = 188;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn188MouseClicked
+
+    private void btn189MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn189MouseClicked
+        value = 189;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn189MouseClicked
+
+    private void btn190MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn190MouseClicked
+        value = 190;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn190MouseClicked
+
+    private void btn191MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn191MouseClicked
+        value = 191;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn191MouseClicked
+
+    private void btn192MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn192MouseClicked
+        value = 192;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn192MouseClicked
+
+    private void btn193MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn193MouseClicked
+        value = 193;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn193MouseClicked
+
+    private void btn194MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn194MouseClicked
+        value = 194;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn194MouseClicked
+
+    private void btn195MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn195MouseClicked
+        value = 195;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn195MouseClicked
+
+    private void btn196MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn196MouseClicked
+        value = 196;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn196MouseClicked
+
+    private void btn197MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn197MouseClicked
+        value = 197;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn197MouseClicked
+
+    private void btn198MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn198MouseClicked
+        value = 198;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn198MouseClicked
+
+    private void btn199MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn199MouseClicked
+        value = 199;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn199MouseClicked
+
+    private void btn200MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn200MouseClicked
+        value = 200;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn200MouseClicked
+
+    private void btn201MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn201MouseClicked
+        value = 201;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn201MouseClicked
+
+    private void btn202MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn202MouseClicked
+        value = 202;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn202MouseClicked
+
+    private void btn203MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn203MouseClicked
+        value = 203;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn203MouseClicked
+
+    private void btn204MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn204MouseClicked
+        value = 204;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn204MouseClicked
+
+    private void btn205MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn205MouseClicked
+        value = 205;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn205MouseClicked
+
+    private void btn206MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn206MouseClicked
+        value = 206;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn206MouseClicked
+
+    private void btn207MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn207MouseClicked
+        value = 207;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn207MouseClicked
+
+    private void btn208MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn208MouseClicked
+        value = 208;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn208MouseClicked
+
+    private void btn209MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn209MouseClicked
+        value = 209;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn209MouseClicked
+
+    private void btn210MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn210MouseClicked
+        value = 210;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn210MouseClicked
+
+    private void btn211MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn211MouseClicked
+        value = 211;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn211MouseClicked
+
+    private void btn212MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn212MouseClicked
+        value = 212;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn212MouseClicked
+
+    private void btn213MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn213MouseClicked
+        value = 213;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn213MouseClicked
+
+    private void btn214MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn214MouseClicked
+        value = 214;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn214MouseClicked
+
+    private void btn215MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn215MouseClicked
+        value = 215;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn215MouseClicked
+
+    private void btn216MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn216MouseClicked
+        value = 216;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn216MouseClicked
+
+    private void btn217MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn217MouseClicked
+        value = 217;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn217MouseClicked
+
+    private void btn218MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn218MouseClicked
+        value = 218;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn218MouseClicked
+
+    private void btn219MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn219MouseClicked
+        value = 21;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn219MouseClicked
+
+    private void btn220MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn220MouseClicked
+        value = 220;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn220MouseClicked
+
+    private void btn221MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn221MouseClicked
+        value = 221;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn221MouseClicked
+
+    private void btn222MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn222MouseClicked
+        value = 222;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn222MouseClicked
+
+    private void btn223MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn223MouseClicked
+        value = 223;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn223MouseClicked
+
+    private void btn224MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn224MouseClicked
+        value = 224;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn224MouseClicked
+
+    private void btn225MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn225MouseClicked
+        value = 225;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn225MouseClicked
+
+    private void btn226MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn226MouseClicked
+        value = 226;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn226MouseClicked
+
+    private void btn227MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn227MouseClicked
+        value = 227;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn227MouseClicked
+
+    private void btn228MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn228MouseClicked
+        value = 228;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn228MouseClicked
+
+    private void btn229MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn229MouseClicked
+        value = 229;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn229MouseClicked
+
+    private void btn230MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn230MouseClicked
+        value = 230;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn230MouseClicked
+
+    private void btn231MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn231MouseClicked
+        value = 231;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn231MouseClicked
+
+    private void btn232MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn232MouseClicked
+        value = 232;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn232MouseClicked
+
+    private void btn233MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn233MouseClicked
+        value = 233;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn233MouseClicked
+
+    private void btn234MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn234MouseClicked
+        value = 234;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn234MouseClicked
+
+    private void btn235MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn235MouseClicked
+        value = 235;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn235MouseClicked
+
+    private void btn236MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn236MouseClicked
+        value = 236;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn236MouseClicked
+
+    private void btn237MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn237MouseClicked
+        value = 237;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn237MouseClicked
+
+    private void btn238MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn238MouseClicked
+        value = 238;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn238MouseClicked
+
+    private void btn239MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn239MouseClicked
+        value = 239;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn239MouseClicked
+
+    private void btn240MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn240MouseClicked
+        value = 240;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn240MouseClicked
+
+    private void btn241MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn241MouseClicked
+        value = 241;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn241MouseClicked
+
+    private void btn242MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn242MouseClicked
+        value = 242;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn242MouseClicked
+
+    private void btn243MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn243MouseClicked
+        value = 243;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn243MouseClicked
+
+    private void btn244MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn244MouseClicked
+        value = 244;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn244MouseClicked
+
+    private void btn245MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn245MouseClicked
+        value = 245;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn245MouseClicked
+
+    private void btn246MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn246MouseClicked
+        value = 246;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn246MouseClicked
+
+    private void btn247MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn247MouseClicked
+        value = 247;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn247MouseClicked
+
+    private void btn248MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn248MouseClicked
+        value = 248;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn248MouseClicked
+
+    private void btn249MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn249MouseClicked
+        value = 249;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn249MouseClicked
+
+    private void btn250MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn250MouseClicked
+        value = 250;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn250MouseClicked
+
+    private void btn251MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn251MouseClicked
+        value = 251;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn251MouseClicked
+
+    private void btn252MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn252MouseClicked
+        value = 252;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn252MouseClicked
+
+    private void btn253MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn253MouseClicked
+        value = 253;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn253MouseClicked
+
+    private void btn254MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn254MouseClicked
+        value = 254;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn254MouseClicked
+
+    private void btn255MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn255MouseClicked
+        value = 255;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn255MouseClicked
+
+    private void btn256MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn256MouseClicked
+        value = 256;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn256MouseClicked
+
+    private void btn257MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn257MouseClicked
+        value = 257;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn257MouseClicked
+
+    private void btn258MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn258MouseClicked
+        value = 258;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn258MouseClicked
+
+    private void btn259MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn259MouseClicked
+        value = 259;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn259MouseClicked
+
+    private void btn260MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn260MouseClicked
+        value = 260;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn260MouseClicked
+
+    private void btn261MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn261MouseClicked
+        value = 261;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn261MouseClicked
+
+    private void btn262MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn262MouseClicked
+        value = 262;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn262MouseClicked
+
+    private void btn263MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn263MouseClicked
+        value = 263;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn263MouseClicked
+
+    private void btn264MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn264MouseClicked
+        value = 264;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn264MouseClicked
+
+    private void btn265MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn265MouseClicked
+        value = 265;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn265MouseClicked
+
+    private void btn266MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn266MouseClicked
+        value = 266;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn266MouseClicked
+
+    private void btn267MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn267MouseClicked
+        value = 267;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn267MouseClicked
+
+    private void btn268MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn268MouseClicked
+        value = 268;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn268MouseClicked
+
+    private void btn269MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn269MouseClicked
+        value = 269;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn269MouseClicked
+
+    private void btn270MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn270MouseClicked
+        value = 270;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn270MouseClicked
+
+    private void btn271MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn271MouseClicked
+        value = 271;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn271MouseClicked
+
+    private void btn272MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn272MouseClicked
+        value = 272;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn272MouseClicked
+
+    private void btn273MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn273MouseClicked
+        value = 273;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn273MouseClicked
+
+    private void btn274MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn274MouseClicked
+        value = 274;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn274MouseClicked
+
+    private void btn275MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn275MouseClicked
+        value = 275;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn275MouseClicked
+
+    private void btn276MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn276MouseClicked
+        value = 276;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn276MouseClicked
+
+    private void btn277MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn277MouseClicked
+        value = 277;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn277MouseClicked
+
+    private void btn278MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn278MouseClicked
+        value = 278;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn278MouseClicked
+
+    private void btn279MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn279MouseClicked
+        value = 279;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn279MouseClicked
+
+    private void btn280MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn280MouseClicked
+        value = 280;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn280MouseClicked
+
+    private void btn281MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn281MouseClicked
+        value = 281;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn281MouseClicked
+
+    private void btn282MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn282MouseClicked
+        value = 282;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn282MouseClicked
+
+    private void btn283MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn283MouseClicked
+        value = 283;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn283MouseClicked
+
+    private void btn284MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn284MouseClicked
+        value = 284;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn284MouseClicked
+
+    private void btn285MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn285MouseClicked
+        value = 285;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn285MouseClicked
+
+    private void btn286MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn286MouseClicked
+        value = 286;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn286MouseClicked
+
+    private void btn287MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn287MouseClicked
+        value = 287;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn287MouseClicked
+
+    private void btn288MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn288MouseClicked
+        value = 288;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn288MouseClicked
+
+    private void btn289MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn289MouseClicked
+        value = 289;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn289MouseClicked
+
+    private void btn290MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn290MouseClicked
+        value = 290;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn290MouseClicked
+
+    private void btn291MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn291MouseClicked
+        value = 291;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn291MouseClicked
+
+    private void btn292MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn292MouseClicked
+        value = 292;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn292MouseClicked
+
+    private void btn293MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn293MouseClicked
+        value = 293;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn293MouseClicked
+
+    private void btn294MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn294MouseClicked
+        value = 294;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn294MouseClicked
+
+    private void btn295MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn295MouseClicked
+        value = 295;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn295MouseClicked
+
+    private void btn296MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn296MouseClicked
+        value = 296;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn296MouseClicked
+
+    private void btn297MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn297MouseClicked
+        value = 297;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn297MouseClicked
+
+    private void btn298MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn298MouseClicked
+        value = 298;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn298MouseClicked
+
+    private void btn299MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn299MouseClicked
+        value = 299;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn299MouseClicked
+
+    private void btn300MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn300MouseClicked
+        value = 300;
+        if (evt.getButton() == 1) {
+            if (!buttonStatusList.get(value)) {
+                if (!mineGenerated) {
+                    generateMineSlots(value);
+                    manageSlot(value);
+                } else if (checkDuplicateSlot(value, mineList)) {
+                    mineHit();
+                } else {
+                    manageSlot(value);
+                }
+            }
+        } else if (evt.getButton() == 3) {
+            manageFlag(value);
+        }
+    }//GEN-LAST:event_btn300MouseClicked
 
     /**
      * @param args the command line arguments
@@ -10279,5 +10341,6 @@ public class MineApp extends javax.swing.JFrame {
     private javax.swing.JPanel jPanel3;
     private javax.swing.JPanel jPanel4;
     private javax.swing.JPanel jPanel5;
+    private javax.swing.JTextField txtTimer;
     // End of variables declaration//GEN-END:variables
 }
